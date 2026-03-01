@@ -1,0 +1,106 @@
+/* src/pages/ManageBookingPage.css */
+.manage-page {
+  padding: calc(var(--nav-h) + 4rem) 0 6rem;
+  min-height: 100vh;
+}
+
+.manage-page__header { margin-bottom: 3rem; max-width: 600px; }
+.manage-page__sub { color: var(--clr-muted); font-size: 1rem; }
+
+.manage-lookup {
+  max-width:     480px;
+  display:       flex;
+  flex-direction: column;
+  gap:           1.25rem;
+}
+.manage-lookup .btn { align-self: flex-start; }
+.manage-lookup__hint {
+  font-size:  0.8125rem;
+  color:      var(--clr-muted);
+  margin-top: -0.5rem;
+}
+
+.manage-details__header {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     flex-start;
+  margin-bottom:   2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.manage-details__ref {
+  font-family:   var(--font-mono);
+  font-size:     1.1rem;
+  font-weight:   600;
+  margin-bottom: 0.5rem;
+}
+.manage-details__status {
+  display:        inline-block;
+  padding:        0.25rem 0.75rem;
+  font-size:      0.8rem;
+  font-weight:    600;
+  letter-spacing: 0.06em;
+  text-transform: capitalize;
+}
+.manage-details__status--confirmed  { background: #f0fdf4; color: #16a34a; }
+.manage-details__status--cancelled  { background: #fef2f2; color: #dc2626; }
+.manage-details__status--checked_in { background: #eff6ff; color: #2563eb; }
+.manage-details__status--pending    { background: #fefce8; color: #ca8a04; }
+
+.manage-details__grid {
+  display:               grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:                   1.5rem;
+  margin-bottom:         2rem;
+}
+
+.manage-details__section {
+  background: var(--clr-surface);
+  border:     1px solid var(--clr-border);
+  padding:    1.5rem;
+}
+.manage-details__section h3 {
+  font-size:      0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color:          var(--clr-secondary);
+  margin-bottom:  1rem;
+}
+
+.manage-review-row {
+  display:         flex;
+  justify-content: space-between;
+  padding:         0.5rem 0;
+  font-size:       0.9rem;
+  border-bottom:   1px solid var(--clr-border);
+}
+.manage-review-row:last-child { border-bottom: none; }
+.manage-review-row span { color: var(--clr-muted); }
+.manage-review-row--balance strong { color: var(--clr-secondary); font-size: 1rem; }
+
+.manage-cancel {
+  background:    #fef2f2;
+  border:        1px solid #fecaca;
+  padding:       1.5rem;
+  margin-bottom: 1.5rem;
+}
+.manage-cancel h3 {
+  font-size:     1rem;
+  font-weight:   600;
+  margin-bottom: 0.5rem;
+  color:         #dc2626;
+}
+.manage-cancel p { font-size: 0.875rem; color: var(--clr-muted); }
+.manage-cancel__btn { margin-top: 1rem; color: #dc2626; border-color: #dc2626; }
+.manage-cancel__btn:hover { background: #dc2626; color: #fff; }
+
+.manage-details__help {
+  font-size:  0.875rem;
+  color:      var(--clr-muted);
+  margin-top: 1.5rem;
+}
+.manage-details__help a { color: var(--clr-secondary); }
+
+@media (max-width: 768px) {
+  .manage-details__grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,111 @@
+// src/services/api.js
+//
+// Centralised API client for all HMS public endpoints.
+// All website components import from here — never fetch directly.
+
+import hotelConfig from '../config/hotel.config.js';
+
+const BASE_URL = hotelConfig.api.baseUrl;
+
+// ─── Core fetch wrapper ───────────────────────────────────────────────────────
+const request = async (method, path, { body, params, token } = {}) => {
+  const url = new URL(`${BASE_URL}${path}`);
+
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') {
+        url.searchParams.set(k, v);
+      }
+    });
+  }
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(url.toString(), {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const error = new Error(data.message || 'Something went wrong.');
+    error.status  = res.status;
+    error.details = data.errors || null;
+    throw error;
+  }
+
+  return data;
+};
+
+// ─── Rooms ────────────────────────────────────────────────────────────────────
+export const roomsApi = {
+  getTypes: () =>
+    request('GET', '/rooms/types'),
+
+  getTypeById: (id) =>
+    request('GET', `/rooms/types/${id}`),
+
+  getRates: (roomTypeId) =>
+    request('GET', `/rooms/types/${roomTypeId}/rates`),
+
+  getAvailability: ({ checkIn, checkOut, guests, typeId } = {}) =>
+    request('GET', '/rooms/availability', {
+      params: {
+        check_in:  checkIn,
+        check_out: checkOut,
+        guests,
+        type_id:   typeId,
+      },
+    }),
+};
+
+// ─── Reservations ─────────────────────────────────────────────────────────────
+export const reservationsApi = {
+  create: (payload) =>
+    request('POST', '/reservations', { body: payload }),
+
+  getById: (id, token) =>
+    request('GET', `/reservations/${id}`, { token }),
+
+  cancel: (id, reason, token) =>
+    request('PATCH', `/reservations/${id}/cancel`, {
+      body:  { reason },
+      token,
+    }),
+};
+
+// ─── Folio & Payments ─────────────────────────────────────────────────────────
+export const folioApi = {
+  getByReservation: (reservationId, token) =>
+    request('GET', `/folio/reservation/${reservationId}`, { token }),
+
+  getSummary: (folioId, token) =>
+    request('GET', `/folio/${folioId}/summary`, { token }),
+
+  addPayment: (folioId, payload, token) =>
+    request('POST', `/folio/${folioId}/payments`, { body: payload, token }),
+};
+
+// ─── Guest Auth ───────────────────────────────────────────────────────────────
+export const guestAuthApi = {
+  register: (payload) =>
+    request('POST', '/auth/register', { body: payload }),
+
+  login: (payload) =>
+    request('POST', '/auth/login', { body: payload }),
+
+  refresh: (refreshToken) =>
+    request('POST', '/auth/refresh', { body: { refresh_token: refreshToken } }),
+
+  me: (token) =>
+    request('GET', '/auth/me', { token }),
+
+  myReservations: (token) =>
+    request('GET', '/auth/my-reservations', { token }),
+
+  myReservationById: (id, token) =>
+    request('GET', `/auth/my-reservations/${id}`, { token }),
+};
