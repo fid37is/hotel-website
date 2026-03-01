@@ -1,7 +1,8 @@
 // src/pages/BookingPage.jsx
 import { useState, useEffect } from 'react';
-import { useNavigate, Link }   from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useBooking }          from '../hooks/useBooking.jsx';
+import { useGuestAuth }        from '../hooks/useGuestAuth.jsx';
 import { roomsApi, reservationsApi } from '../services/api.js';
 import hotelConfig             from '../config/hotel.config.js';
 import { fmt }                 from '../utils/currency.js';
@@ -17,7 +18,23 @@ const nights = (ci, co) => {
 
 export default function BookingPage() {
   const { state, dispatch } = useBooking();
+  const { guest, isLoggedIn } = useGuestAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Sync URL params into booking context on first load (e.g. from homepage search)
+  useEffect(() => {
+    const ci = searchParams.get('checkIn');
+    const co = searchParams.get('checkOut');
+    const g  = searchParams.get('guests');
+    if (ci && !state.search.checkIn) {
+      dispatch({ type: 'SET_SEARCH', payload: {
+        checkIn:  ci,
+        checkOut: co || '',
+        guests:   g  ? Number(g) : 1,
+      }});
+    }
+  }, []);
   const [step, setStep] = useState(state.selectedRoom ? 1 : 0);
 
   const [roomTypes,     setRoomTypes]     = useState([]);
@@ -26,12 +43,16 @@ export default function BookingPage() {
   const [selectedRate,  setSelectedRate]  = useState(state.selectedRate);
   const [rates,         setRates]         = useState([]);
 
-  const [form, setForm] = useState({
-    firstName:       state.guestDetails.firstName || '',
-    lastName:        state.guestDetails.lastName  || '',
-    email:           state.guestDetails.email     || '',
-    phone:           state.guestDetails.phone     || '',
-    specialRequests: state.guestDetails.specialRequests || '',
+  // Prefill from logged-in guest account, then from booking context, then empty
+  const [form, setForm] = useState(() => {
+    const nameParts = guest?.full_name?.trim().split(' ') || [];
+    return {
+      firstName:       state.guestDetails.firstName || nameParts[0]        || '',
+      lastName:        state.guestDetails.lastName  || nameParts.slice(1).join(' ') || '',
+      email:           state.guestDetails.email     || guest?.email         || '',
+      phone:           state.guestDetails.phone     || guest?.phone         || '',
+      specialRequests: state.guestDetails.specialRequests                   || '',
+    };
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting,  setSubmitting] = useState(false);
@@ -40,7 +61,8 @@ export default function BookingPage() {
   const checkIn  = state.search.checkIn;
   const checkOut = state.search.checkOut;
   const numNights = nights(checkIn, checkOut);
-  const totalAmount = selectedRate ? selectedRate.rate * numNights : 0;
+  const ratePerNight = selectedRate?.base_rate ?? selectedRate?.rate ?? selectedRoom?.base_rate ?? 0;
+  const totalAmount = ratePerNight * numNights;
 
   useEffect(() => {
     document.title = `Book a Room | ${hotelConfig.shortName}`;
@@ -193,7 +215,7 @@ export default function BookingPage() {
                           onChange={() => setSelectedRate(rate)}
                         />
                         <span className="booking-rate-option__name">{rate.name}</span>
-                        <span className="booking-rate-option__price">{fmt(rate.rate)}/night</span>
+                        <span className="booking-rate-option__price">{fmt(rate.base_rate || rate.rate)}/night</span>
                       </label>
                     ))}
                   </div>

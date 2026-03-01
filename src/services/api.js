@@ -108,4 +108,10 @@ export const guestAuthApi = {
 
   myReservationById: (id, token) =>
     request('GET', `/auth/my-reservations/${id}`, { token }),
+
+  forgotPassword: (email) =>
+    request('POST', '/auth/forgot-password', { body: { email } }),
+
+  resetPassword: ({ token, password }) =>
+    request('POST', '/auth/reset-password', { body: { token, password } }),
 };

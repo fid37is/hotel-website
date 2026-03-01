@@ -142,3 +142,40 @@
   margin-top:    2rem;
   margin-bottom: 0;
 }
+
+/* ── Booking card date picker ─────────────────────────────────────────────── */
+.room-detail__book-dates {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.625rem;
+  margin-bottom:  1rem;
+}
+
+.room-detail__book-field {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.3rem;
+}
+
+.room-detail__book-label {
+  font-size:      0.7rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color:          var(--clr-muted);
+  font-weight:    500;
+}
+
+.room-detail__book-total {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     center;
+  padding:         0.75rem 0;
+  border-top:      1px solid var(--clr-border);
+  border-bottom:   1px solid var(--clr-border);
+  margin-bottom:   1rem;
+  font-size:       0.9375rem;
+}
+.room-detail__book-total strong {
+  color:       var(--clr-secondary);
+  font-size:   1.125rem;
+}

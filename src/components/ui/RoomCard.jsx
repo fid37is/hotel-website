@@ -10,7 +10,7 @@ export default function RoomCard({ room, showBookBtn = false, onBook }) {
 
   return (
     <article className="room-card">
-      <Link to={`/rooms/${room.id}`} className="room-card__image-wrap">
+      <Link to={`/rooms/${room.room_type_id || room.type_id || room.id}`} className="room-card__image-wrap">
         {room.images?.[0] ? (
           <img
             src={room.images[0]}
@@ -52,7 +52,7 @@ export default function RoomCard({ room, showBookBtn = false, onBook }) {
         )}
 
         <div className="room-card__footer">
-          <Link to={`/rooms/${room.id}`} className="btn btn--outline">
+          <Link to={`/rooms/${room.room_type_id || room.type_id || room.id}`} className="btn btn--outline">
             View Details
           </Link>
           {showBookBtn && (

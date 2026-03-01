@@ -19,6 +19,18 @@ export default function RoomDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
 
+  // Date & guest selection
+  const today    = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const [checkIn,  setCheckIn]  = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [guests,   setGuests]   = useState(1);
+  const [dateError, setDateError] = useState('');
+
+  const numNights = checkIn && checkOut
+    ? Math.max(0, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000))
+    : 0;
+
   useEffect(() => {
     Promise.all([
       roomsApi.getTypeById(id),
@@ -34,7 +46,11 @@ export default function RoomDetailPage() {
   }, [id]);
 
   const handleBook = () => {
-    dispatch({ type: 'SELECT_ROOM', payload: { room, rate: rates[0] || null } });
+    setDateError('');
+    if (!checkIn || !checkOut) { setDateError('Please select check-in and check-out dates.'); return; }
+    if (numNights < 1)         { setDateError('Check-out must be after check-in.'); return; }
+    dispatch({ type: 'SELECT_ROOM',   payload: { room, rate: rates[0] || null } });
+    dispatch({ type: 'SET_SEARCH',    payload: { checkIn, checkOut, guests } });
     navigate('/book');
   };
 
@@ -127,6 +143,45 @@ export default function RoomDetailPage() {
                   <span>per night</span>
                 </div>
               )}
+
+              <div className="room-detail__book-dates">
+                <div className="room-detail__book-field">
+                  <label className="room-detail__book-label">Check-in</label>
+                  <input
+                    type="date"
+                    className="input"
+                    min={today}
+                    value={checkIn}
+                    onChange={e => { setCheckIn(e.target.value); if (checkOut && e.target.value >= checkOut) setCheckOut(''); }}
+                  />
+                </div>
+                <div className="room-detail__book-field">
+                  <label className="room-detail__book-label">Check-out</label>
+                  <input
+                    type="date"
+                    className="input"
+                    min={checkIn || tomorrow}
+                    value={checkOut}
+                    onChange={e => setCheckOut(e.target.value)}
+                  />
+                </div>
+                <div className="room-detail__book-field">
+                  <label className="room-detail__book-label">Guests</label>
+                  <select className="input" value={guests} onChange={e => setGuests(Number(e.target.value))}>
+                    {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {numNights > 0 && (rates[0]?.base_rate || room.base_rate) && (
+                <div className="room-detail__book-total">
+                  <span>{numNights} night{numNights !== 1 ? 's' : ''}</span>
+                  <strong>{fmt((rates[0]?.base_rate || room.base_rate) * numNights)}</strong>
+                </div>
+              )}
+
+              {dateError && <p className="form-error" style={{ marginBottom: '0.5rem' }}>{dateError}</p>}
+
               <button className="btn btn--gold btn--lg" onClick={handleBook} style={{ width: '100%', justifyContent: 'center' }}>
                 Book This Room
               </button>
