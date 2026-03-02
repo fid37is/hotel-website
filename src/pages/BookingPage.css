@@ -291,3 +291,46 @@
   .booking-step__line { width: 2rem; }
   .booking-form__row { grid-template-columns: 1fr; }
 }
+
+/* ── Inline date bar in step 0 ───────────────────────────────────────────── */
+.booking-dates-bar {
+  display:       grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap:           0.75rem;
+  align-items:   end;
+  padding:       1rem 1.25rem;
+  background:    var(--clr-bg);
+  border:        1px solid var(--clr-border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+}
+
+.booking-dates-bar__field {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.3rem;
+}
+
+.booking-dates-bar__label {
+  font-size:      0.7rem;
+  font-weight:    500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color:          var(--clr-muted);
+}
+
+.booking-dates-bar__nights {
+  font-size:   0.875rem;
+  font-weight: 600;
+  color:       var(--clr-secondary);
+  white-space: nowrap;
+  padding-bottom: 0.6rem;
+}
+
+@media (max-width: 640px) {
+  .booking-dates-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .booking-dates-bar__field--guests { grid-column: 1; }
+  .booking-dates-bar__nights        { grid-column: 2; padding-bottom: 0.6rem; }
+}

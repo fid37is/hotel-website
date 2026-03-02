@@ -58,9 +58,17 @@ export default function BookingPage() {
   const [submitting,  setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  const checkIn  = state.search.checkIn;
-  const checkOut = state.search.checkOut;
+  const today    = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const [checkIn,  setCheckIn]  = useState(state.search.checkIn  || '');
+  const [checkOut, setCheckOut] = useState(state.search.checkOut || '');
+  const [guestCount, setGuestCount] = useState(state.search.guests || 1);
   const numNights = nights(checkIn, checkOut);
+
+  // Keep context in sync whenever local dates change
+  useEffect(() => {
+    dispatch({ type: 'SET_SEARCH', payload: { checkIn, checkOut, guests: guestCount } });
+  }, [checkIn, checkOut, guestCount]);
   const ratePerNight = selectedRate?.base_rate ?? selectedRate?.rate ?? selectedRoom?.base_rate ?? 0;
   const totalAmount = ratePerNight * numNights;
 
@@ -86,7 +94,7 @@ export default function BookingPage() {
 
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const validateStep1 = () => !!(selectedRoom && selectedRate && checkIn && checkOut);
+  const validateStep1 = () => !!(selectedRoom && selectedRate && checkIn && checkOut && numNights > 0);
 
   const validateStep2 = () => {
     const errs = {};
@@ -114,7 +122,7 @@ export default function BookingPage() {
         check_out:    checkOut,
         room_type_id: selectedRoom.id,
         rate_plan_id: selectedRate?.id,
-        adults:       state.search.guests || 1,
+        adults:       guestCount,
         guest: {
           first_name: form.firstName,
           last_name:  form.lastName,
@@ -161,11 +169,32 @@ export default function BookingPage() {
               <div className="booking-panel">
                 <h2 className="booking-panel__title">Select a Room</h2>
 
-                {(!checkIn || !checkOut) && (
-                  <div className="alert alert--info">
-                    No dates selected. <Link to="/rooms">Search availability</Link> first, or choose a room type below and contact us to confirm dates.
+                {/* Always-visible date bar */}
+                <div className="booking-dates-bar">
+                  <div className="booking-dates-bar__field">
+                    <label className="booking-dates-bar__label">Check-in</label>
+                    <input type="date" className="input" min={today}
+                      value={checkIn}
+                      onChange={e => { setCheckIn(e.target.value); if (checkOut && e.target.value >= checkOut) setCheckOut(''); }} />
                   </div>
-                )}
+                  <div className="booking-dates-bar__field">
+                    <label className="booking-dates-bar__label">Check-out</label>
+                    <input type="date" className="input" min={checkIn || tomorrow}
+                      value={checkOut}
+                      onChange={e => setCheckOut(e.target.value)} />
+                  </div>
+                  <div className="booking-dates-bar__field booking-dates-bar__field--guests">
+                    <label className="booking-dates-bar__label">Guests</label>
+                    <select className="input" value={guestCount} onChange={e => setGuestCount(Number(e.target.value))}>
+                      {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>)}
+                    </select>
+                  </div>
+                  {numNights > 0 && (
+                    <div className="booking-dates-bar__nights">
+                      {numNights} night{numNights !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
 
                 {loadingRooms ? (
                   <div className="booking-room-list">

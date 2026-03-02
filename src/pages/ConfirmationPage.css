@@ -4,27 +4,27 @@
   padding:    calc(var(--nav-h) + 4rem) 0 6rem;
   background: var(--clr-bg);
 }
-.confirm-page__inner { display: flex; justify-content: center; }
+.confirm-page__inner { display: flex; justify-content: center; padding: 0 1rem; }
 
 .confirm-card {
   background:  var(--clr-surface);
   border:      1px solid var(--clr-border);
-  padding:     3rem;
+  padding:     2.5rem 2rem;
   max-width:   560px;
   width:       100%;
   text-align:  center;
+  border-radius: var(--radius-lg);
 }
 
 .confirm-card__icon {
-  width:           64px;
-  height:          64px;
+  width:           56px;
+  height:          56px;
   background:      var(--clr-secondary);
   color:           #fff;
   border-radius:   50%;
   display:         flex;
   align-items:     center;
   justify-content: center;
-  font-size:       1.75rem;
   margin:          0 auto 1.5rem;
 }
 
@@ -46,8 +46,8 @@
   border:        1px solid var(--clr-border);
   padding:       1.25rem;
   margin-bottom: 1.5rem;
+  border-radius: var(--radius);
 }
-
 .confirm-card__ref-label {
   display:        block;
   font-size:      0.7rem;
@@ -56,12 +56,11 @@
   color:          var(--clr-muted);
   margin-bottom:  0.5rem;
 }
-
 .confirm-card__ref-code {
-  font-family: var(--font-mono);
-  font-size:   1.5rem;
-  font-weight: 600;
-  color:       var(--clr-secondary);
+  font-family:    var(--font-mono);
+  font-size:      1.5rem;
+  font-weight:    600;
+  color:          var(--clr-secondary);
   letter-spacing: 0.1em;
 }
 
@@ -69,8 +68,9 @@
   text-align:    left;
   border:        1px solid var(--clr-border);
   margin-bottom: 1.5rem;
+  border-radius: var(--radius);
+  overflow:      hidden;
 }
-
 .confirm-card__detail-row {
   display:         flex;
   justify-content: space-between;
@@ -79,22 +79,97 @@
   border-bottom:   1px solid var(--clr-border);
 }
 .confirm-card__detail-row:last-child { border-bottom: none; }
-.confirm-card__detail-row span { color: var(--clr-muted); }
-
-.confirm-card__status {
-  color:      #16a34a;
-  text-transform: capitalize;
-}
+.confirm-card__detail-row span  { color: var(--clr-muted); }
+.confirm-card__status { color: #16a34a; text-transform: capitalize; }
 
 .confirm-card__notice {
   background:    var(--clr-bg);
   padding:       1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-size:     0.8125rem;
   color:         var(--clr-muted);
   line-height:   1.7;
+  border-radius: var(--radius);
+  text-align:    left;
 }
 
+/* ── Post-booking account prompt ─────────────────────────────────────────── */
+.confirm-account {
+  border:        1px solid var(--clr-secondary);
+  border-radius: var(--radius-lg);
+  padding:       1.25rem;
+  margin-bottom: 1.5rem;
+  text-align:    left;
+  background:    rgba(201,169,110,0.04);
+  animation:     fadeSlideIn 0.4s ease;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.confirm-account__header {
+  display:     flex;
+  align-items: flex-start;
+  gap:         0.75rem;
+  margin-bottom: 1rem;
+}
+
+.confirm-account__icon {
+  width:           40px;
+  height:          40px;
+  border-radius:   50%;
+  background:      var(--clr-surface);
+  border:          1px solid var(--clr-border);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  flex-shrink:     0;
+  color:           var(--clr-secondary);
+}
+
+.confirm-account__title {
+  font-weight:   600;
+  font-size:     0.9375rem;
+  margin-bottom: 0.2rem;
+}
+
+.confirm-account__sub {
+  font-size: 0.8125rem;
+  color:     var(--clr-muted);
+}
+
+.confirm-account__fields {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.75rem;
+  margin-bottom:  0.75rem;
+}
+
+.confirm-account__skip {
+  width:       100%;
+  background:  none;
+  border:      none;
+  font-size:   0.8rem;
+  color:       var(--clr-muted);
+  cursor:      pointer;
+  padding:     0.5rem 0 0;
+  font-family: var(--font-body);
+  text-decoration: underline;
+}
+.confirm-account__skip:hover { color: var(--clr-text); }
+
+.confirm-account__success {
+  display:     flex;
+  align-items: center;
+  gap:         0.5rem;
+  font-size:   0.9rem;
+  color:       #16a34a;
+}
+.confirm-account__success a { color: var(--clr-secondary); }
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
 .confirm-card__actions {
   display:         flex;
   gap:             0.75rem;
@@ -103,8 +178,5 @@
   flex-wrap:       wrap;
 }
 
-.confirm-card__help {
-  font-size: 0.8125rem;
-  color:     var(--clr-muted);
-}
+.confirm-card__help { font-size: 0.8125rem; color: var(--clr-muted); }
 .confirm-card__help a { color: var(--clr-secondary); }
