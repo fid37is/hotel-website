@@ -1,17 +1,15 @@
-// src/pages/RoomDetailPage.jsx
+// src/pages/RoomDetailPage.jsx — Pure Tailwind
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { roomsApi }   from '../services/api.js';
 import { useBooking } from '../hooks/useBooking.jsx';
 import hotelConfig    from '../config/hotel.config.js';
 import { fmt }        from '../utils/currency.js';
-import RoomGallery from '../components/ui/RoomGallery.jsx';
-import './RoomDetailPage.css';
-
+import RoomGallery    from '../components/ui/RoomGallery.jsx';
 
 export default function RoomDetailPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id }       = useParams();
+  const navigate     = useNavigate();
   const { dispatch } = useBooking();
 
   const [room,    setRoom]    = useState(null);
@@ -19,7 +17,6 @@ export default function RoomDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
 
-  // Date & guest selection
   const today    = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   const [checkIn,  setCheckIn]  = useState('');
@@ -32,10 +29,7 @@ export default function RoomDetailPage() {
     : 0;
 
   useEffect(() => {
-    Promise.all([
-      roomsApi.getTypeById(id),
-      roomsApi.getRates(id),
-    ])
+    Promise.all([roomsApi.getTypeById(id), roomsApi.getRates(id)])
       .then(([roomRes, ratesRes]) => {
         setRoom(roomRes.data);
         setRates(ratesRes.data || []);
@@ -49,83 +43,83 @@ export default function RoomDetailPage() {
     setDateError('');
     if (!checkIn || !checkOut) { setDateError('Please select check-in and check-out dates.'); return; }
     if (numNights < 1)         { setDateError('Check-out must be after check-in.'); return; }
-    dispatch({ type: 'SELECT_ROOM',   payload: { room, rate: rates[0] || null } });
-    dispatch({ type: 'SET_SEARCH',    payload: { checkIn, checkOut, guests } });
+    dispatch({ type: 'SELECT_ROOM', payload: { room, rate: rates[0] || null } });
+    dispatch({ type: 'SET_SEARCH', payload: { checkIn, checkOut, guests } });
     navigate('/book');
   };
 
   if (loading) return (
-    <div className="room-detail-page">
-      <div className="container" style={{ paddingTop: 'calc(var(--nav-h) + 3rem)' }}>
-        <div className="skeleton" style={{ height: '480px', marginBottom: '2rem' }} />
-        <div className="skeleton" style={{ height: '200px' }} />
-      </div>
+    <div className="container py-12 flex flex-col gap-6">
+      <div className="skeleton h-[480px] rounded-lg" />
+      <div className="skeleton h-48 rounded-lg" />
     </div>
   );
 
   if (error || !room) return (
-    <div className="room-detail-page room-detail-page--error">
-      <div className="container">
-        <p>{error || 'Room not found.'}</p>
-        <Link to="/rooms" className="btn btn--primary">Back to Rooms</Link>
-      </div>
+    <div className="container py-20 flex flex-col items-center gap-6 text-center">
+      <p className="text-muted">{error || 'Room not found.'}</p>
+      <Link to="/rooms" className="btn btn--primary">Back to Rooms</Link>
     </div>
   );
 
   return (
-    <div className="room-detail-page">
-      {/* Back nav + title */}
-      <div className="room-detail__page-header">
+    <div className="pb-24">
+      {/* Page header */}
+      <div className="bg-bg border-b border-border py-6 pt-nav">
         <div className="container">
-          <Link to="/rooms" className="room-detail__back">← All Rooms</Link>
-          <h1 className="room-detail__title">{room.name}</h1>
-          {room.category && <span className="room-detail__category">{room.category}</span>}
+          <Link to="/rooms" className="text-sm text-muted hover:text-secondary transition-colors mb-2 block">← All Rooms</Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-4xl font-medium">{room.name}</h1>
+            {room.category && (
+              <span className="text-xs tracking-widest uppercase bg-primary text-white px-3 py-1.5 rounded-sm">{room.category}</span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Gallery */}
-      <div className="container room-detail__gallery-wrap">
-        <RoomGallery
-          images={room.images || []}
-          videoUrl={room.video_url || null}
-          roomName={room.name}
-        />
+      <div className="container py-8">
+        <RoomGallery images={room.images || []} videoUrl={room.video_url || null} roomName={room.name} />
       </div>
 
+      {/* Content */}
       <div className="container">
-        <div className="room-detail__layout">
-
-          {/* Main info */}
-          <div className="room-detail__main">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Main */}
+          <div className="lg:col-span-2 flex flex-col gap-10">
             {room.description && (
-              <div className="room-detail__section">
-                <h2>About This Room</h2>
-                <p>{room.description}</p>
+              <div>
+                <h2 className="font-display text-2xl font-medium mb-4">About This Room</h2>
+                <p className="text-muted leading-relaxed">{room.description}</p>
               </div>
             )}
 
             {room.amenities?.length > 0 && (
-              <div className="room-detail__section">
-                <h2>Amenities</h2>
-                <ul className="room-detail__amenities">
+              <div>
+                <h2 className="font-display text-2xl font-medium mb-4">Amenities</h2>
+                <ul className="grid grid-cols-2 gap-3">
                   {room.amenities.map((a, i) => (
-                    <li key={i}><span>✦</span>{a}</li>
+                    <li key={i} className="flex items-center gap-2 text-sm text-muted">
+                      <span className="text-secondary text-xs">✦</span>{a}
+                    </li>
                   ))}
                 </ul>
               </div>
             )}
 
             {rates.length > 0 && (
-              <div className="room-detail__section">
-                <h2>Rate Plans</h2>
-                <div className="room-detail__rates">
+              <div>
+                <h2 className="font-display text-2xl font-medium mb-4">Rate Plans</h2>
+                <div className="flex flex-col gap-3">
                   {rates.map(rate => (
-                    <div key={rate.id} className="room-detail__rate">
+                    <div key={rate.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-secondary/50 transition-colors">
                       <div>
-                        <p className="room-detail__rate-name">{rate.name || 'Standard Rate'}</p>
-                        {rate.description && <p className="room-detail__rate-desc">{rate.description}</p>}
+                        <p className="font-medium text-sm">{rate.name || 'Standard Rate'}</p>
+                        {rate.description && <p className="text-xs text-muted mt-0.5">{rate.description}</p>}
                       </div>
-                      <p className="room-detail__rate-price">{fmt(rate.base_rate)}<small>/night</small></p>
+                      <p className="font-display text-xl font-medium text-secondary">
+                        {fmt(rate.base_rate)}<small className="text-xs text-muted font-body font-normal">/night</small>
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -133,40 +127,30 @@ export default function RoomDetailPage() {
             )}
           </div>
 
-          {/* Sidebar */}
-          <aside className="room-detail__sidebar">
-            <div className="room-detail__book-card">
+          {/* Booking sidebar */}
+          <aside>
+            <div className="sticky top-24 bg-surface border border-border rounded-lg p-6 flex flex-col gap-5">
               {(rates[0] || room.base_rate) && (
-                <div className="room-detail__book-price">
-                  <span>From</span>
-                  <strong>{fmt(rates[0]?.base_rate || room.base_rate)}</strong>
-                  <span>per night</span>
+                <div className="text-center pb-4 border-b border-border">
+                  <span className="text-xs text-muted">From</span>
+                  <p className="font-display text-4xl font-medium text-primary">{fmt(rates[0]?.base_rate || room.base_rate)}</p>
+                  <span className="text-xs text-muted">per night</span>
                 </div>
               )}
 
-              <div className="room-detail__book-dates">
-                <div className="room-detail__book-field">
-                  <label className="room-detail__book-label">Check-in</label>
-                  <input
-                    type="date"
-                    className="input"
-                    min={today}
-                    value={checkIn}
-                    onChange={e => { setCheckIn(e.target.value); if (checkOut && e.target.value >= checkOut) setCheckOut(''); }}
-                  />
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="form-label">Check-in</label>
+                  <input type="date" className="input" min={today} value={checkIn}
+                    onChange={e => { setCheckIn(e.target.value); if (checkOut && e.target.value >= checkOut) setCheckOut(''); }} />
                 </div>
-                <div className="room-detail__book-field">
-                  <label className="room-detail__book-label">Check-out</label>
-                  <input
-                    type="date"
-                    className="input"
-                    min={checkIn || tomorrow}
-                    value={checkOut}
-                    onChange={e => setCheckOut(e.target.value)}
-                  />
+                <div className="flex flex-col gap-1">
+                  <label className="form-label">Check-out</label>
+                  <input type="date" className="input" min={checkIn || tomorrow} value={checkOut}
+                    onChange={e => setCheckOut(e.target.value)} />
                 </div>
-                <div className="room-detail__book-field">
-                  <label className="room-detail__book-label">Guests</label>
+                <div className="flex flex-col gap-1">
+                  <label className="form-label">Guests</label>
                   <select className="input" value={guests} onChange={e => setGuests(Number(e.target.value))}>
                     {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>)}
                   </select>
@@ -174,26 +158,27 @@ export default function RoomDetailPage() {
               </div>
 
               {numNights > 0 && (rates[0]?.base_rate || room.base_rate) && (
-                <div className="room-detail__book-total">
-                  <span>{numNights} night{numNights !== 1 ? 's' : ''}</span>
-                  <strong>{fmt((rates[0]?.base_rate || room.base_rate) * numNights)}</strong>
+                <div className="flex items-center justify-between py-3 border-t border-b border-border text-sm font-medium">
+                  <span className="text-muted">{numNights} night{numNights !== 1 ? 's' : ''}</span>
+                  <span className="font-display text-xl">{fmt((rates[0]?.base_rate || room.base_rate) * numNights)}</span>
                 </div>
               )}
 
-              {dateError && <p className="form-error" style={{ marginBottom: '0.5rem' }}>{dateError}</p>}
+              {dateError && <p className="form-error">{dateError}</p>}
 
-              <button className="btn btn--gold btn--lg" onClick={handleBook} style={{ width: '100%', justifyContent: 'center' }}>
+              <button className="btn btn--gold btn--lg justify-center w-full" onClick={handleBook}>
                 Book This Room
               </button>
-              <p className="room-detail__book-note">Best rate guaranteed when booking direct</p>
-              <div className="room-detail__book-contact">
-                <a href={`tel:${hotelConfig.contact.phone}`}>{hotelConfig.contact.phone}</a>
+
+              <p className="text-xs text-center text-muted">Best rate guaranteed when booking direct</p>
+
+              <div className="flex justify-center gap-3 text-xs text-muted">
+                <a href={`tel:${hotelConfig.contact.phone}`} className="hover:text-secondary transition-colors">{hotelConfig.contact.phone}</a>
                 <span>or</span>
-                <a href={`mailto:${hotelConfig.contact.email}`}>Email us</a>
+                <a href={`mailto:${hotelConfig.contact.email}`} className="hover:text-secondary transition-colors">Email us</a>
               </div>
             </div>
           </aside>
-
         </div>
       </div>
     </div>

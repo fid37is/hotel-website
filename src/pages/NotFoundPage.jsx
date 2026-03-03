@@ -1,25 +1,14 @@
-// src/pages/NotFoundPage.jsx
+// src/pages/NotFoundPage.jsx — Pure Tailwind
 import { Link } from 'react-router-dom';
-import hotelConfig from '../config/hotel.config.js';
 
 export default function NotFoundPage() {
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-      padding: '2rem', paddingTop: 'var(--nav-h)',
-    }}>
-      <p style={{ fontFamily: 'var(--font-display)', fontSize: '8rem', fontWeight: 300, lineHeight: 1, color: 'var(--clr-border)' }}>
-        404
-      </p>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 500, marginBottom: '1rem' }}>
-        Page Not Found
-      </h1>
-      <p style={{ color: 'var(--clr-muted)', marginBottom: '2rem' }}>
-        The page you're looking for doesn't exist.
-      </p>
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-        <Link to="/" className="btn btn--primary">Go Home</Link>
+    <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-6">
+      <p className="font-display text-[8rem] font-light leading-none text-border">404</p>
+      <h1 className="font-display text-3xl font-medium mb-3">Page Not Found</h1>
+      <p className="text-muted mb-8">The page you're looking for doesn't exist.</p>
+      <div className="flex gap-4 flex-wrap justify-center">
+        <Link to="/"      className="btn btn--primary">Go Home</Link>
         <Link to="/rooms" className="btn btn--outline">View Rooms</Link>
       </div>
     </div>
