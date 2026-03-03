@@ -1,65 +1,62 @@
-// src/components/ui/RoomCard.jsx
+// src/components/ui/RoomCard.jsx — Pure Tailwind
 import { Link } from 'react-router-dom';
-import hotelConfig from '../../config/hotel.config.js';
-import { fmt }     from '../../utils/currency.js';
-import './RoomCard.css';
-
+import { fmt }  from '../../utils/currency.js';
 
 export default function RoomCard({ room, showBookBtn = false, onBook }) {
   const baseRate = room.rate_plans?.[0]?.rate || room.base_rate;
+  const roomId   = room.room_type_id || room.type_id || room.id;
 
   return (
-    <article className="room-card">
-      <Link to={`/rooms/${room.room_type_id || room.type_id || room.id}`} className="room-card__image-wrap">
+    <article className="bg-surface rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col">
+      {/* Image */}
+      <Link to={`/rooms/${roomId}`} className="block relative overflow-hidden aspect-[4/3]">
         {room.images?.[0] ? (
-          <img
-            src={room.images[0]}
-            alt={room.name}
-            className="room-card__image"
-            loading="lazy"
-          />
+          <img src={room.images[0]} alt={room.name}
+            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" loading="lazy" />
         ) : (
-          <div className="room-card__image-placeholder">
-            <span>{room.name?.[0]}</span>
+          <div className="w-full h-full bg-border flex items-center justify-center">
+            <span className="font-display text-6xl text-muted">{room.name?.[0]}</span>
           </div>
         )}
         {room.category && (
-          <span className="room-card__badge">{room.category}</span>
+          <span className="absolute top-4 left-4 bg-primary text-white text-[10px] tracking-widest uppercase px-3 py-1.5">
+            {room.category}
+          </span>
         )}
       </Link>
 
-      <div className="room-card__body">
-        <div className="room-card__top">
-          <h3 className="room-card__name">{room.name}</h3>
+      {/* Body */}
+      <div className="p-6 flex flex-col flex-1 gap-4">
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="font-display text-2xl font-medium leading-snug">{room.name}</h3>
           {baseRate && (
-            <div className="room-card__price">
-              <span className="room-card__price-amount">{fmt(baseRate)}</span>
-              <span className="room-card__price-unit">/ night</span>
+            <div className="text-right shrink-0">
+              <span className="block text-xl font-semibold text-primary">{fmt(baseRate)}</span>
+              <span className="text-xs text-muted">/ night</span>
             </div>
           )}
         </div>
 
         {room.description && (
-          <p className="room-card__desc">{room.description}</p>
+          <p className="text-sm text-muted leading-relaxed line-clamp-3">{room.description}</p>
         )}
 
         {room.amenities?.length > 0 && (
-          <ul className="room-card__amenities">
+          <ul className="flex flex-wrap gap-2">
             {room.amenities.slice(0, 4).map((a, i) => (
-              <li key={i} className="room-card__amenity">{a}</li>
+              <li key={i} className="text-[11px] tracking-wide text-muted bg-bg px-3 py-1 rounded-full border border-border">
+                {a}
+              </li>
             ))}
           </ul>
         )}
 
-        <div className="room-card__footer">
-          <Link to={`/rooms/${room.room_type_id || room.type_id || room.id}`} className="btn btn--outline">
+        <div className="flex gap-3 mt-auto pt-2">
+          <Link to={`/rooms/${roomId}`} className="btn btn--outline flex-1 justify-center text-xs tracking-wide">
             View Details
           </Link>
           {showBookBtn && (
-            <button
-              className="btn btn--primary"
-              onClick={() => onBook?.(room)}
-            >
+            <button className="btn btn--primary flex-1 justify-center text-xs tracking-wide" onClick={() => onBook?.(room)}>
               Book Now
             </button>
           )}

@@ -1,6 +1,5 @@
-// src/components/ui/RoomGallery.jsx
+// src/components/ui/RoomGallery.jsx — Pure Tailwind
 import { useState, useEffect, useCallback } from 'react';
-import './RoomGallery.css';
 
 export default function RoomGallery({ images = [], videoUrl = null, roomName = '' }) {
   const [activeIndex,   setActiveIndex]   = useState(0);
@@ -8,235 +7,138 @@ export default function RoomGallery({ images = [], videoUrl = null, roomName = '
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [videoPlaying,  setVideoPlaying]  = useState(false);
 
-  const hasImages = images.length > 0;
-  const hasVideo  = !!videoUrl;
-  const hasMedia  = hasImages || hasVideo;
-
-  // All media items: video first (if present), then images
   const mediaItems = [
-    ...(hasVideo  ? [{ type: 'video', src: videoUrl }] : []),
-    ...(hasImages ? images.map(src => ({ type: 'image', src })) : []),
+    ...(videoUrl ? [{ type: 'video', src: videoUrl }] : []),
+    ...images.map(src => ({ type: 'image', src })),
   ];
-
   const total = mediaItems.length;
 
-  const prev = useCallback(() => {
-    setActiveIndex(i => (i - 1 + total) % total);
-    setVideoPlaying(false);
-  }, [total]);
+  const prev = useCallback(() => { setActiveIndex(i => (i - 1 + total) % total); setVideoPlaying(false); }, [total]);
+  const next = useCallback(() => { setActiveIndex(i => (i + 1) % total); setVideoPlaying(false); }, [total]);
+  const lbPrev = useCallback(() => setLightboxIndex(i => (i - 1 + total) % total), [total]);
+  const lbNext = useCallback(() => setLightboxIndex(i => (i + 1) % total), [total]);
 
-  const next = useCallback(() => {
-    setActiveIndex(i => (i + 1) % total);
-    setVideoPlaying(false);
-  }, [total]);
-
-  const lightboxPrev = useCallback(() => {
-    setLightboxIndex(i => (i - 1 + total) % total);
-  }, [total]);
-
-  const lightboxNext = useCallback(() => {
-    setLightboxIndex(i => (i + 1) % total);
-  }, [total]);
-
-  // Keyboard navigation
   useEffect(() => {
     if (!lightboxOpen) return;
-    const handler = (e) => {
-      if (e.key === 'ArrowLeft')  lightboxPrev();
-      if (e.key === 'ArrowRight') lightboxNext();
+    const h = (e) => {
+      if (e.key === 'ArrowLeft')  lbPrev();
+      if (e.key === 'ArrowRight') lbNext();
       if (e.key === 'Escape')     setLightboxOpen(false);
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [lightboxOpen, lightboxPrev, lightboxNext]);
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [lightboxOpen, lbPrev, lbNext]);
 
-  // Lock body scroll when lightbox open
   useEffect(() => {
     document.body.style.overflow = lightboxOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [lightboxOpen]);
 
-  const openLightbox = (index) => {
-    setLightboxIndex(index);
-    setLightboxOpen(true);
-  };
+  if (!total) return (
+    <div className="aspect-[16/9] rounded-lg bg-border flex flex-col items-center justify-center gap-3 text-muted">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" width="48" height="48">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+      </svg>
+      <p className="font-display text-lg">{roomName}</p>
+      <p className="text-sm">Photos coming soon</p>
+    </div>
+  );
 
-  // ── No media placeholder ─────────────────────────────────────────────────
-  if (!hasMedia) {
-    return (
-      <div className="room-gallery room-gallery--empty">
-        <div className="room-gallery__placeholder">
-          <div className="room-gallery__placeholder-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <path d="M21 15l-5-5L5 21"/>
-            </svg>
-          </div>
-          <p className="room-gallery__placeholder-title">{roomName}</p>
-          <p className="room-gallery__placeholder-sub">Photos coming soon</p>
-        </div>
-      </div>
-    );
-  }
+  const active = mediaItems[activeIndex];
 
-  const activeItem = mediaItems[activeIndex];
+  if (total === 1 && active.type === 'image') return (
+    <div className="relative aspect-[16/9] rounded-lg overflow-hidden cursor-zoom-in" onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}>
+      <img src={active.src} alt={roomName} className="w-full h-full object-cover" />
+      <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-3 py-1.5 rounded">Click to enlarge</div>
+      {lightboxOpen && <Lightbox items={mediaItems} index={lightboxIndex} onClose={() => setLightboxOpen(false)} onPrev={lbPrev} onNext={lbNext} />}
+    </div>
+  );
 
-  // ── Single image (no thumbnails needed) ─────────────────────────────────
-  if (total === 1 && activeItem.type === 'image') {
-    return (
-      <div className="room-gallery room-gallery--single">
-        <div className="room-gallery__main" onClick={() => openLightbox(0)}>
-          <img src={activeItem.src} alt={roomName} />
-          <div className="room-gallery__zoom-hint">Click to enlarge</div>
-        </div>
-        {lightboxOpen && (
-          <Lightbox
-            items={mediaItems}
-            index={lightboxIndex}
-            onClose={() => setLightboxOpen(false)}
-            onPrev={lightboxPrev}
-            onNext={lightboxNext}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // ── Full gallery ─────────────────────────────────────────────────────────
   return (
-    <div className="room-gallery">
-
-      {/* Main viewer */}
-      <div className="room-gallery__main">
-        {activeItem.type === 'video' ? (
-          <div className="room-gallery__video-wrap">
-            {videoPlaying ? (
-              <video
-                src={activeItem.src}
-                controls
-                autoPlay
-                className="room-gallery__video"
-              />
-            ) : (
-              <>
-                <div className="room-gallery__video-poster">
-                  <span className="room-gallery__video-label">Room Video</span>
-                </div>
-                <button
-                  className="room-gallery__play-btn"
-                  onClick={() => setVideoPlaying(true)}
-                  aria-label="Play video"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </button>
-              </>
-            )}
-          </div>
+    <div className="flex flex-col gap-3">
+      {/* Main */}
+      <div className="relative aspect-[16/9] rounded-lg overflow-hidden bg-primary/10">
+        {active.type === 'video' ? (
+          videoPlaying ? (
+            <video src={active.src} controls autoPlay className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary/20">
+              <button className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center hover:bg-white/30 transition-colors"
+                onClick={() => setVideoPlaying(true)} aria-label="Play video">
+                <svg viewBox="0 0 24 24" fill="white" width="28" height="28"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+            </div>
+          )
         ) : (
-          <img
-            src={activeItem.src}
-            alt={`${roomName} — photo ${activeIndex + 1}`}
-            className="room-gallery__main-img"
-            onClick={() => openLightbox(activeIndex)}
-          />
+          <img src={active.src} alt={`${roomName} — ${activeIndex + 1}`}
+            className="w-full h-full object-cover cursor-zoom-in"
+            onClick={() => { setLightboxIndex(activeIndex); setLightboxOpen(true); }} />
         )}
 
-        {/* Nav arrows */}
         {total > 1 && (
           <>
-            <button className="room-gallery__arrow room-gallery__arrow--prev" onClick={prev} aria-label="Previous">
-              ‹
-            </button>
-            <button className="room-gallery__arrow room-gallery__arrow--next" onClick={next} aria-label="Next">
-              ›
-            </button>
+            <button className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 text-white text-2xl flex items-center justify-center hover:bg-black/60 transition-colors" onClick={prev} aria-label="Previous">‹</button>
+            <button className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 text-white text-2xl flex items-center justify-center hover:bg-black/60 transition-colors" onClick={next} aria-label="Next">›</button>
           </>
         )}
 
-        {/* Counter */}
-        <div className="room-gallery__counter">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-3 py-1 rounded-full">
           {activeIndex + 1} / {total}
         </div>
 
-        {/* Expand button (images only) */}
-        {activeItem.type === 'image' && (
-          <button
-            className="room-gallery__expand"
-            onClick={() => openLightbox(activeIndex)}
-            aria-label="View fullscreen"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+        {active.type === 'image' && (
+          <button className="absolute top-3 right-3 w-9 h-9 bg-black/40 text-white rounded flex items-center justify-center hover:bg-black/60 transition-colors"
+            onClick={() => { setLightboxIndex(activeIndex); setLightboxOpen(true); }} aria-label="Fullscreen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
               <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
             </svg>
           </button>
         )}
       </div>
 
-      {/* Thumbnail strip */}
+      {/* Thumbnails */}
       {total > 1 && (
-        <div className="room-gallery__thumbs">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {mediaItems.map((item, i) => (
-            <button
-              key={i}
-              className={`room-gallery__thumb ${i === activeIndex ? 'room-gallery__thumb--active' : ''}`}
+            <button key={i}
+              className={`shrink-0 w-20 h-16 rounded overflow-hidden border-2 transition-all ${i === activeIndex ? 'border-secondary' : 'border-transparent opacity-60 hover:opacity-100'}`}
               onClick={() => { setActiveIndex(i); setVideoPlaying(false); }}
               aria-label={`View ${item.type} ${i + 1}`}
             >
               {item.type === 'video' ? (
-                <div className="room-gallery__thumb-video">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
+                <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" fill="white" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>
                 </div>
               ) : (
-                <img src={item.src} alt={`Thumbnail ${i + 1}`} />
+                <img src={item.src} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
               )}
             </button>
           ))}
         </div>
       )}
 
-      {/* Lightbox */}
-      {lightboxOpen && (
-        <Lightbox
-          items={mediaItems}
-          index={lightboxIndex}
-          onClose={() => setLightboxOpen(false)}
-          onPrev={lightboxPrev}
-          onNext={lightboxNext}
-        />
-      )}
+      {lightboxOpen && <Lightbox items={mediaItems} index={lightboxIndex} onClose={() => setLightboxOpen(false)} onPrev={lbPrev} onNext={lbNext} />}
     </div>
   );
 }
 
-// ── Lightbox ────────────────────────────────────────────────────────────────
 function Lightbox({ items, index, onClose, onPrev, onNext }) {
   const item  = items[index];
   const total = items.length;
-
   return (
-    <div className="lightbox" onClick={onClose}>
-      <div className="lightbox__inner" onClick={e => e.stopPropagation()}>
-
-        <button className="lightbox__close" onClick={onClose} aria-label="Close">✕</button>
-
-        <div className="lightbox__media">
-          {item.type === 'video' ? (
-            <video src={item.src} controls autoPlay className="lightbox__video" />
-          ) : (
-            <img src={item.src} alt={`Photo ${index + 1}`} className="lightbox__img" />
-          )}
-        </div>
-
+    <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center" onClick={onClose}>
+      <div className="relative w-full max-w-5xl max-h-[90vh] px-12" onClick={e => e.stopPropagation()}>
+        <button className="absolute -top-10 right-0 text-white/70 hover:text-white text-2xl" onClick={onClose} aria-label="Close">✕</button>
+        {item.type === 'video' ? (
+          <video src={item.src} controls autoPlay className="w-full max-h-[80vh] object-contain" />
+        ) : (
+          <img src={item.src} alt={`Photo ${index + 1}`} className="w-full max-h-[80vh] object-contain" />
+        )}
         {total > 1 && (
           <>
-            <button className="lightbox__arrow lightbox__arrow--prev" onClick={onPrev}>‹</button>
-            <button className="lightbox__arrow lightbox__arrow--next" onClick={onNext}>›</button>
-            <div className="lightbox__counter">{index + 1} / {total}</div>
+            <button className="absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 text-white text-3xl flex items-center justify-center hover:text-secondary transition-colors" onClick={onPrev}>‹</button>
+            <button className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 text-white text-3xl flex items-center justify-center hover:text-secondary transition-colors" onClick={onNext}>›</button>
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-white/50 text-sm">{index + 1} / {total}</div>
           </>
         )}
       </div>

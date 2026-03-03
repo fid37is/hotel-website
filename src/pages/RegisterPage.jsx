@@ -1,9 +1,8 @@
-// src/pages/RegisterPage.jsx
+// src/pages/RegisterPage.jsx — Pure Tailwind
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useGuestAuth } from '../hooks/useGuestAuth.jsx';
-import hotelConfig      from '../config/hotel.config.js';
-import './AuthPages.css';
+import { useGuestAuth }   from '../hooks/useGuestAuth.jsx';
+import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
 
 const EyeIcon = ({ open }) => open ? (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
@@ -13,20 +12,18 @@ const EyeIcon = ({ open }) => open ? (
   </svg>
 ) : (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-    <circle cx="12" cy="12" r="3"/>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
   </svg>
 );
 
 export default function RegisterPage() {
+  const hotelConfig = useHotelConfig();
   const { register, isLoggedIn } = useGuestAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from     = location.state?.from || '/account';
 
-  const [form, setForm] = useState({
-    full_name: '', email: '', phone: '', address: '', password: '', confirm_password: '',
-  });
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', address: '', password: '', confirm_password: '' });
   const [showPwd,  setShowPwd]  = useState(false);
   const [showConf, setShowConf] = useState(false);
   const [loading,  setLoading]  = useState(false);
@@ -42,10 +39,10 @@ export default function RegisterPage() {
 
   const validate = () => {
     const e = {};
-    if (!form.full_name.trim())   e.full_name         = 'Full name is required';
-    if (!form.email.trim())       e.email             = 'Email is required';
-    if (form.password.length < 8) e.password          = 'Minimum 8 characters';
-    if (form.password !== form.confirm_password) e.confirm_password = 'Passwords do not match';
+    if (!form.full_name.trim())                      e.full_name         = 'Full name is required';
+    if (!form.email.trim())                          e.email             = 'Email is required';
+    if (form.password.length < 8)                    e.password          = 'Minimum 8 characters';
+    if (form.password !== form.confirm_password)     e.confirm_password  = 'Passwords do not match';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -53,110 +50,62 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    setError('');
-    setLoading(true);
-    try {
-      await register(form);
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    setError(''); setLoading(true);
+    try { await register(form); navigate(from, { replace: true }); }
+    catch (err) { setError(err.message || 'Registration failed. Please try again.'); }
+    finally     { setLoading(false); }
   };
 
+  const Field = ({ name, label, type = 'text', placeholder, optional, showToggle, show, onToggle }) => (
+    <div className="form-group">
+      <label className="form-label">
+        {label}{optional && <span className="form-label-optional ml-1">optional</span>}
+      </label>
+      <div className="relative">
+        <input type={show !== undefined ? (show ? 'text' : type) : type}
+          className={`input ${errors[name] ? 'input--error' : ''} ${showToggle ? 'pr-12' : ''}`}
+          placeholder={placeholder} value={form[name]}
+          onChange={e => set(name, e.target.value)}
+          autoComplete={type === 'password' ? 'new-password' : name} />
+        {showToggle && (
+          <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors"
+            onClick={onToggle}>
+            <EyeIcon open={show} />
+          </button>
+        )}
+      </div>
+      {errors[name] && <span className="form-error">{errors[name]}</span>}
+    </div>
+  );
+
   return (
-    <div className="auth-page">
-      <div className="auth-page__inner">
-        <div className="auth-card">
-          <div className="auth-card__header">
-            <Link to="/" className="auth-card__logo">{hotelConfig.shortName}</Link>
-            <h1 className="auth-card__title">Create Account</h1>
-            <p className="auth-card__sub">Book and manage your stays with ease</p>
+    <div className="min-h-screen bg-bg flex items-center justify-center pt-nav px-4 pb-12">
+      <div className="w-full max-w-md">
+        <div className="bg-surface rounded-lg border border-border p-8 lg:p-10">
+          <div className="text-center mb-8">
+            <Link to="/" className="font-display text-2xl font-medium text-primary">{hotelConfig.shortName}</Link>
+            <h1 className="text-2xl font-medium mt-4 mb-1">Create Account</h1>
+            <p className="text-sm text-muted">Book and manage your stays with ease</p>
           </div>
 
-          {error && <div className="alert alert--error">{error}</div>}
+          {error && <div className="alert alert--error mb-5">{error}</div>}
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Full Name</label>
-              <input className={`input ${errors.full_name ? 'input--error' : ''}`}
-                placeholder="John Doe" value={form.full_name}
-                onChange={e => set('full_name', e.target.value)}
-                autoComplete="name" required />
-              {errors.full_name && <span className="form-error">{errors.full_name}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <input type="email" className={`input ${errors.email ? 'input--error' : ''}`}
-                placeholder="you@example.com" value={form.email}
-                onChange={e => set('email', e.target.value)}
-                autoComplete="email" required />
-              {errors.email && <span className="form-error">{errors.email}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                Phone Number <span className="form-label-optional">optional</span>
-              </label>
-              <input type="tel" className="input"
-                placeholder="+234 800 000 0000" value={form.phone}
-                onChange={e => set('phone', e.target.value)}
-                autoComplete="tel" />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                Address <span className="form-label-optional">optional</span>
-              </label>
-              <input className="input"
-                placeholder="Street, City, State"
-                value={form.address}
-                onChange={e => set('address', e.target.value)} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div className="auth-input-wrap">
-                <input type={showPwd ? 'text' : 'password'}
-                  className={`input ${errors.password ? 'input--error' : ''}`}
-                  placeholder="Min. 8 characters" value={form.password}
-                  onChange={e => set('password', e.target.value)}
-                  autoComplete="new-password" required />
-                <button type="button" className="auth-input-toggle"
-                  onClick={() => setShowPwd(v => !v)}>
-                  <EyeIcon open={showPwd} />
-                </button>
-              </div>
-              {errors.password && <span className="form-error">{errors.password}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Confirm Password</label>
-              <div className="auth-input-wrap">
-                <input type={showConf ? 'text' : 'password'}
-                  className={`input ${errors.confirm_password ? 'input--error' : ''}`}
-                  placeholder="Repeat password" value={form.confirm_password}
-                  onChange={e => set('confirm_password', e.target.value)}
-                  autoComplete="new-password" required />
-                <button type="button" className="auth-input-toggle"
-                  onClick={() => setShowConf(v => !v)}>
-                  <EyeIcon open={showConf} />
-                </button>
-              </div>
-              {errors.confirm_password && <span className="form-error">{errors.confirm_password}</span>}
-            </div>
-
-            <button type="submit" className="btn btn--primary auth-form__submit" disabled={loading}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <Field name="full_name"        label="Full Name"       placeholder="John Doe" />
+            <Field name="email"            label="Email Address"   type="email" placeholder="you@example.com" />
+            <Field name="phone"            label="Phone Number"    type="tel" placeholder="+234 800 000 0000" optional />
+            <Field name="address"          label="Address"         placeholder="Street, City, State" optional />
+            <Field name="password"         label="Password"        type="password" placeholder="Min. 8 characters"
+              showToggle show={showPwd}  onToggle={() => setShowPwd(v => !v)} />
+            <Field name="confirm_password" label="Confirm Password" type="password" placeholder="Repeat password"
+              showToggle show={showConf} onToggle={() => setShowConf(v => !v)} />
+            <button type="submit" className="btn btn--primary justify-center w-full py-3.5" disabled={loading}>
               {loading ? 'Creating account…' : 'Create Account'}
             </button>
           </form>
 
-          <div className="auth-card__footer">
-            <p>Already have an account?{' '}
-              <Link to="/login" state={{ from }}>Sign in</Link>
-            </p>
+          <div className="mt-6 pt-6 border-t border-border text-center text-sm">
+            <p>Already have an account? <Link to="/login" state={{ from }} className="text-secondary hover:underline">Sign in</Link></p>
           </div>
         </div>
       </div>
