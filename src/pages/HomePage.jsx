@@ -1,7 +1,7 @@
 // src/pages/HomePage.jsx
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import hotelConfig from '../config/hotel.config.js';
+import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
 import { roomsApi } from '../services/api.js';
 import AvailabilitySearch from '../components/booking/AvailabilitySearch.jsx';
 
@@ -18,7 +18,7 @@ const EXPERIENCES = [
   { num: '01', title: 'Culinary',    desc: 'Contemporary West African cuisine reimagined for the modern palate. Breakfast through late-night dining.' },
   { num: '02', title: 'Wellness',    desc: 'A sanctuary of calm. Deep-tissue massage, hydrotherapy, and restorative treatments.' },
   { num: '03', title: 'Gatherings', desc: 'Intimate boardrooms to grand ballrooms — every event orchestrated to perfection.' },
-  { num: '04', title: 'Concierge',  desc: 'Your personal Asaba guide. Transfers, reservations, private tours arranged seamlessly.' },
+  { num: '04', title: 'Concierge',  desc: 'Your personal Lagos guide. Transfers, reservations, private tours arranged seamlessly.' },
 ];
 
 const STATS = [
@@ -32,6 +32,7 @@ const fmt = (n) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(n);
 
 export default function HomePage() {
+  const hotelConfig = useHotelConfig();
   const navigate = useNavigate();
   const [featuredRooms, setFeaturedRooms] = useState([]);
   const [loading,       setLoading]       = useState(true);
@@ -48,11 +49,11 @@ export default function HomePage() {
   const displayRooms = featuredRooms.length > 0 ? featuredRooms : [
     { id: 0, name: 'Deluxe Room',        base_rate: 45000,  category: 'Standard', room_type: 'Deluxe',      description: 'Sun-drenched interiors with bespoke furnishings and city skyline views.' },
     { id: 1, name: 'Executive Suite',    base_rate: 85000,  category: 'Premium',  room_type: 'Executive',   description: 'Expansive living quarters with a private terrace and dedicated butler service.' },
-    { id: 2, name: 'Presidential Suite', base_rate: 150000, category: 'Luxury',   room_type: 'Presidential',description: 'Two floors of curated luxury — the pinnacle of Asaba hospitality.' },
+    { id: 2, name: 'Presidential Suite', base_rate: 150000, category: 'Luxury',   room_type: 'Presidential',description: 'Two floors of curated luxury — the pinnacle of Lagos hospitality.' },
   ];
 
   const handleRoomClick = (room) => {
-    const typeSlug = encodeURIComponent(room.room_type || room.category || room.name);
+    const typeSlug = encodeURIComponent(room.name);
     navigate(`/rooms?type=${typeSlug}`);
   };
 
@@ -79,8 +80,8 @@ export default function HomePage() {
           className="absolute hidden md:flex flex-col items-end gap-1"
           style={{ top: 'calc(var(--nav-h, 72px) + 24px)', right: '2rem' }}
         >
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase' }}>Delta State</span>
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase' }}>Asaba, Nigeria</span>
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase' }}>Victoria Island</span>
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase' }}>Lagos, Nigeria</span>
         </div>
 
         {/* Content — pinned to bottom */}
@@ -90,7 +91,7 @@ export default function HomePage() {
             <div className="flex items-center gap-3 mb-4 md:mb-5">
               <div style={{ width: 28, height: 1, background: '#c9a96e', flexShrink: 0 }} />
               <span style={{ color: '#c9a96e', fontSize: 9, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500 }}>
-                Est. 2025 · Asaba
+                Est. 2012 · Lagos
               </span>
             </div>
 
@@ -149,7 +150,7 @@ export default function HomePage() {
                 className="font-display"
                 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.8rem)', fontWeight: 400, lineHeight: 1.18, color: '#1a1a1a' }}
               >
-                Where the spirit of Asaba meets<br className="hidden sm:block" />
+                Where the spirit of Lagos meets<br className="hidden sm:block" />
                 {' '}the art of unhurried luxury —<br className="hidden sm:block" />
                 {' '}<em>a haven above the city.</em>
               </p>

@@ -36,16 +36,15 @@ export default function RoomsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Tabs — built from the category field on room type objects
+  // Tabs — one per room type name (each type IS its own tab)
   const tabs = useMemo(() => {
-    const cats = [...new Set(allTypes.map(r => r.category).filter(Boolean))];
-    return ['All', ...cats];
+    return ['All', ...allTypes.map(r => r.name).filter(Boolean)];
   }, [allTypes]);
 
   // Room types shown for the active tab
   const tabTypes = useMemo(() => {
     if (activeTab === 'All') return allTypes;
-    return allTypes.filter(r => r.category === activeTab);
+    return allTypes.filter(r => r.name === activeTab);
   }, [allTypes, activeTab]);
 
   // When a search has run, the availability results come back as room instances
@@ -76,7 +75,7 @@ export default function RoomsPage() {
     if (displayTypes.some(t => t.available)) return [];
     return tabs.filter(tab => {
       if (tab === 'All' || tab === activeTab) return false;
-      return allTypes.filter(t => t.category === tab).some(t => availableTypeIds.has(t.id));
+      return allTypes.filter(t => t.name === tab).some(t => availableTypeIds.has(t.id));
     });
   }, [displayTypes, hasSearch, availableTypeIds, tabs, allTypes, activeTab]);
 
@@ -156,7 +155,7 @@ export default function RoomsPage() {
               const badge = hasSearch && availableTypeIds
                 ? (tab === 'All'
                     ? allTypes.filter(t => availableTypeIds.has(t.id)).length
-                    : allTypes.filter(t => t.category === tab && availableTypeIds.has(t.id)).length)
+                    : allTypes.filter(t => t.name === tab && availableTypeIds.has(t.id)).length)
                 : null;
 
               return (
@@ -367,14 +366,14 @@ function RoomTypeCard({ roomType, index, hasSearch, onBook, onViewDetails, fmt }
       )}
 
       {/* Category badge */}
-      {roomType.category && (
+      {(roomType.category || roomType.room_category) && (
         <div style={{ position: 'absolute', top: 18, left: 18, zIndex: 6 }}>
           <span style={{
             fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase',
             color: '#c9a96e', border: '1px solid rgba(201,169,110,0.4)',
             padding: '4px 10px',
           }}>
-            {roomType.category}
+            {roomType.category || roomType.room_category}
           </span>
         </div>
       )}
