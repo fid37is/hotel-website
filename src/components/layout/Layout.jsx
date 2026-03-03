@@ -42,12 +42,14 @@ export default function Layout() {
       <header className={`fixed top-0 left-0 right-0 z-50 h-nav transition-all duration-300 ${navBg}`}>
         <div className="container flex items-center justify-between h-full">
 
-          {/* Logo — image if set in HMS, else hotel short name */}
-          <Link to="/" className={`font-display text-xl font-medium tracking-wider transition-colors ${isHome && !scrolled ? 'text-white' : 'text-primary'}`}>
-            {hotelConfig.logoUrl
-              ? <img src={hotelConfig.logoUrl} alt={hotelConfig.shortName} className="h-9 w-auto object-contain" />
-              : hotelConfig.shortName
-            }
+          {/* Logo — both if available, otherwise whichever is set */}
+          <Link to="/" className={`flex items-center gap-2.5 font-display text-xl font-medium tracking-wider transition-colors ${isHome && !scrolled ? 'text-white' : 'text-primary'}`}>
+            {hotelConfig.logoUrl && (
+              <img src={hotelConfig.logoUrl} alt={hotelConfig.shortName} className="h-9 w-auto object-contain" />
+            )}
+            {hotelConfig.shortName && (
+              <span>{hotelConfig.shortName}</span>
+            )}
           </Link>
 
           {/* Desktop nav */}
