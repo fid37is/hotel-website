@@ -10,7 +10,7 @@ import { guestAuthApi } from '../services/api.js';
 const GuestAuthContext = createContext(null);
 
 export const GuestAuthProvider = ({ children }) => {
-  const [guest,   setGuest]   = useState(null);   // { id, full_name, email, phone }
+  const [guest,   setGuest]   = useState(null);   // { id, full_name, email, phone, ... }
   const [token,   setToken]   = useState(null);   // access token (memory only)
   const [loading, setLoading] = useState(true);   // restoring session
 
@@ -24,7 +24,7 @@ export const GuestAuthProvider = ({ children }) => {
         const res = await guestAuthApi.refresh(refreshToken);
         setToken(res.data.access_token);
 
-        // Get profile with new access token
+        // Get full profile with new access token
         const profile = await guestAuthApi.me(res.data.access_token);
         setGuest(profile.data);
       } catch {
@@ -54,6 +54,13 @@ export const GuestAuthProvider = ({ children }) => {
     return res.data;
   }, []);
 
+  // ── Update profile ─────────────────────────────────────────────────────────
+  const updateProfile = useCallback(async (payload) => {
+    const res = await guestAuthApi.updateMe(payload, token);
+    setGuest(prev => ({ ...prev, ...res.data })); // merge updated fields into local state
+    return res.data;
+  }, [token]);
+
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     setGuest(null);
@@ -64,7 +71,10 @@ export const GuestAuthProvider = ({ children }) => {
   const isLoggedIn = !!guest && !!token;
 
   return (
-    <GuestAuthContext.Provider value={{ guest, token, loading, isLoggedIn, login, register, logout }}>
+    <GuestAuthContext.Provider value={{
+      guest, token, loading, isLoggedIn,
+      login, register, logout, updateProfile,
+    }}>
       {children}
     </GuestAuthContext.Provider>
   );

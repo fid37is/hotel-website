@@ -15,6 +15,7 @@ import RegisterPage       from './pages/RegisterPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage  from './pages/ResetPasswordPage.jsx';
 import NotFoundPage       from './pages/NotFoundPage.jsx';
+import ChatPage           from './pages/ChatPage.jsx';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
                 <Route path="/register"            element={<RegisterPage />} />
                 <Route path="/forgot-password"     element={<ForgotPasswordPage />} />
                 <Route path="/reset-password"      element={<ResetPasswordPage />} />
+                <Route path="/chat"                    element={<ChatPage />} />
                 <Route path="*"                    element={<NotFoundPage />} />
               </Route>
             </Routes>
@@ -42,4 +44,4 @@ export default function App() {
       </HotelConfigProvider>
     </BrowserRouter>
   );
-}
+} 
