@@ -12,6 +12,8 @@ const nights = (ci, co) => (!ci || !co) ? 0 : Math.max(0, Math.round((new Date(c
 
 export default function BookingPage() {
   const hotelConfig = useHotelConfig();
+  const cancellationPolicy = hotelConfig.policies?.cancellation || '';
+  const [policyExpanded, setPolicyExpanded] = useState(false);
   const { state, dispatch } = useBooking();
   const { guest, isLoggedIn } = useGuestAuth();
   const navigate = useNavigate();
@@ -26,7 +28,7 @@ export default function BookingPage() {
     }
   }, []);
 
-  const [step, setStep] = useState(state.selectedRoom ? 1 : 0);
+  const [step, setStep] = useState(0);
   const [availableTypes,  setAvailableTypes]  = useState([]);
   const [loadingRooms,    setLoadingRooms]    = useState(false);
   const [availError,      setAvailError]      = useState('');
@@ -54,6 +56,12 @@ export default function BookingPage() {
   const [checkIn,     setCheckIn]     = useState(state.search.checkIn  || '');
   const [checkOut,    setCheckOut]    = useState(state.search.checkOut || '');
   const [guestCount,  setGuestCount]  = useState(state.search.guests   || 1);
+  // Clear preselectedTypeId from search state after reading it (one-time use)
+  useEffect(() => {
+    if (state.search.preselectedTypeId) {
+      dispatch({ type: 'SET_SEARCH', payload: { ...state.search, preselectedTypeId: undefined } });
+    }
+  }, []);
   const numNights = nights(checkIn, checkOut);
 
   useEffect(() => { dispatch({ type: 'SET_SEARCH', payload: { checkIn, checkOut, guests: guestCount } }); }, [checkIn, checkOut, guestCount]);
@@ -73,11 +81,24 @@ export default function BookingPage() {
         rooms.forEach(room => {
           const t = room.room_types || room.room_type;
           if (!t) return;
-          if (!map[t.id]) map[t.id] = { ...t, count: 0, rooms: [] };
+          if (!map[t.id]) map[t.id] = { ...t, count: 0, rooms: [], photos: [] };
           map[t.id].count++;
           map[t.id].rooms.push(room);
+          // Collect up to 5 photos across rooms of this type
+          if (map[t.id].photos.length < 5) {
+            const imgs = (room.media || []).filter(m => m.type === 'image' || m.type === 'gif');
+            imgs.forEach(img => {
+              if (map[t.id].photos.length < 5) map[t.id].photos.push(img.url);
+            });
+          }
         });
-        setAvailableTypes(Object.values(map).sort((a, b) => a.base_rate - b.base_rate));
+        const sorted = Object.values(map).sort((a, b) => a.base_rate - b.base_rate);
+        setAvailableTypes(sorted);
+        // If guest came from rooms page with a pre-selected type, highlight it
+        const preId = state.search.preselectedTypeId;
+        if (preId && map[preId]) {
+          setSelectedTypeId(preId);
+        }
       })
       .catch(() => setAvailError('Could not check availability. Please try again.'))
       .finally(() => setLoadingRooms(false));
@@ -191,34 +212,69 @@ export default function BookingPage() {
                       {loadingRooms && <div className="flex flex-col gap-3">{[1,2,3].map(i => <div key={i} className="skeleton h-20 rounded-lg" />)}</div>}
                       {!loadingRooms && availError && <p className="alert alert--error">{availError}</p>}
                       {!loadingRooms && !availError && availableTypes.length === 0 && (
-                        <p className="text-sm text-muted py-6 text-center">No rooms available for these dates. Please try different dates.</p>
+                        <div className="py-8 text-center flex flex-col gap-3">
+                          <p className="text-sm font-medium text-primary">No rooms available for these dates.</p>
+                          <p className="text-xs text-muted">Try adjusting your dates or contact us directly — we may have options not shown online.</p>
+                          <a href={`tel:${hotelConfig.contact?.phone}`}
+                            className="text-xs text-secondary hover:underline mx-auto">
+                            {hotelConfig.contact?.phone}
+                          </a>
+                        </div>
                       )}
                       {!loadingRooms && availableTypes.length > 0 && (
                         <div className="flex flex-col gap-3">
                           {availableTypes.map(type => {
                             const isSel = selectedTypeId === type.id;
+                            const photos = type.photos || [];
                             return (
                               <button key={type.id} type="button" onClick={() => setSelectedTypeId(isSel ? '' : type.id)}
-                                className={`w-full text-left p-4 rounded-lg border-2 transition-all ${isSel ? 'border-secondary bg-secondary/5' : 'border-border hover:border-secondary/40'}`}>
-                                <div className="flex items-center justify-between gap-4">
-                                  <div>
-                                    <p className="font-medium text-sm">{type.name}</p>
-                                    <p className="text-xs text-muted mt-0.5">
-                                      {type.count} room{type.count !== 1 ? 's' : ''} available
-                                      {type.max_occupancy ? ` · up to ${type.max_occupancy} guests` : ''}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-display text-xl font-medium text-primary">{fmt(type.base_rate)}</p>
-                                    <p className="text-xs text-muted">/ night</p>
-                                  </div>
-                                </div>
-                                {isSel && (
-                                  <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-secondary/20 text-xs text-secondary font-medium">
-                                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="2 8 6 12 14 4"/></svg>
-                                    Selected
+                                className={`w-full text-left rounded-lg border-2 transition-all overflow-hidden ${isSel ? 'border-secondary bg-secondary/5' : 'border-border hover:border-secondary/40'}`}>
+                                {/* Photo strip */}
+                                {photos.length > 0 && (
+                                  <div className="relative h-40 bg-border/30 overflow-hidden">
+                                    <img src={photos[0]} alt={type.name}
+                                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" />
+                                    {photos.length > 1 && (
+                                      <div className="absolute bottom-2 right-2 flex gap-1">
+                                        {photos.slice(0, 5).map((_, i) => (
+                                          <span key={i} className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/50'}`} />
+                                        ))}
+                                      </div>
+                                    )}
+                                    {isSel && (
+                                      <div className="absolute top-2 left-2 bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" width="10" height="10"><polyline points="2 8 6 12 14 4"/></svg>
+                                        Selected
+                                      </div>
+                                    )}
                                   </div>
                                 )}
+                                <div className="p-4">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                      <p className="font-medium text-sm">{type.name}</p>
+                                      <p className="text-xs text-muted mt-0.5">
+                                        {type.count} room{type.count !== 1 ? 's' : ''} available
+                                        {type.max_occupancy ? ` · up to ${type.max_occupancy} guests` : ''}
+                                      </p>
+                                      {type.amenities?.length > 0 && (
+                                        <p className="text-xs text-muted mt-1 truncate">
+                                          {type.amenities.slice(0, 4).join(' · ')}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <p className="font-display text-xl font-medium text-primary">{fmt(type.base_rate)}</p>
+                                      <p className="text-xs text-muted">/ night</p>
+                                    </div>
+                                  </div>
+                                  {isSel && !photos.length && (
+                                    <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-secondary/20 text-xs text-secondary font-medium">
+                                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="2 8 6 12 14 4"/></svg>
+                                      Selected
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             );
                           })}
@@ -298,8 +354,8 @@ export default function BookingPage() {
                       { title: 'Stay Details', rows: [
                         ['Room', selectedRoom?.name],
                         ['Rate Plan', selectedRate?.name || 'Standard'],
-                        ['Check-in', checkIn],
-                        ['Check-out', checkOut],
+                        ['Check-in', `${checkIn}${hotelConfig.contact?.checkIn ? ` from ${hotelConfig.contact.checkIn}` : ''}`],
+                        ['Check-out', `${checkOut}${hotelConfig.contact?.checkOut ? ` by ${hotelConfig.contact.checkOut}` : ''}`],
                         ['Nights', numNights],
                         ['Guests', state.search.guests],
                       ]},
@@ -324,8 +380,46 @@ export default function BookingPage() {
                     ))}
                   </div>
                   {submitError && <div className="alert alert--error mt-4">{submitError}</div>}
-                  <p className="text-xs text-muted mt-4">
-                    By confirming, you agree to our cancellation policy. Payment may be required at check-in or as directed by the hotel.
+
+                  {/* Cancellation Policy */}
+                  <div className="mt-5 rounded-lg border border-border bg-surface p-4">
+                    <button
+                      type="button"
+                      onClick={() => setPolicyExpanded(e => !e)}
+                      className="w-full flex items-center justify-between gap-2 text-left"
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-widest text-muted">
+                        Cancellation Policy
+                      </span>
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"
+                        width="14" height="14" className="text-muted shrink-0 transition-transform"
+                        style={{ transform: policyExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <polyline points="2 5 8 11 14 5"/>
+                      </svg>
+                    </button>
+
+                    {cancellationPolicy ? (
+                      <>
+                        <p className={`text-xs text-muted mt-2 leading-relaxed ${!policyExpanded ? 'line-clamp-2' : ''}`}>
+                          {cancellationPolicy}
+                        </p>
+                        {cancellationPolicy.length > 120 && (
+                          <button type="button" onClick={() => setPolicyExpanded(e => !e)}
+                            className="text-xs text-secondary mt-1 hover:underline">
+                            {policyExpanded ? 'Show less' : 'Read full policy'}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted mt-2 leading-relaxed">
+                        Please contact the hotel directly for cancellation terms.
+                        Payment may be required at check-in or as directed by the hotel.
+                      </p>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-muted mt-3">
+                    By confirming your booking, you agree to the above policy and the hotel's terms and conditions.
                   </p>
                 </>
               )}
@@ -350,6 +444,10 @@ export default function BookingPage() {
               <h3 className="text-sm font-medium tracking-wide mb-4">Booking Summary</h3>
               {selectedType ? (
                 <div className="flex flex-col gap-3 text-sm">
+                  {selectedType.photos?.[0] && (
+                    <img src={selectedType.photos[0]} alt={selectedType.name}
+                      className="w-full h-28 object-cover rounded-lg" />
+                  )}
                   <p className="font-display text-lg font-medium">{selectedType.name}</p>
                   {selectedRate && <p className="text-xs text-muted">{selectedRate.name || 'Standard Rate'}</p>}
                   <div className="flex flex-col gap-2 pt-3 border-t border-border">

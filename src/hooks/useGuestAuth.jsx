@@ -21,13 +21,21 @@ export const GuestAuthProvider = ({ children }) => {
       if (!refreshToken) { setLoading(false); return; }
 
       try {
-        const res = await guestAuthApi.refresh(refreshToken);
-        setToken(res.data.access_token);
+        const res    = await guestAuthApi.refresh(refreshToken);
+        const access = res.data.access_token;
+        setToken(access);
 
-        // Get full profile with new access token
-        const profile = await guestAuthApi.me(res.data.access_token);
-        setGuest(profile.data);
+        // Fetch full profile — if it fails, fall back to JWT payload so
+        // the user stays logged in even if /auth/me is temporarily unavailable.
+        try {
+          const profile = await guestAuthApi.me(access);
+          setGuest(profile.data);
+        } catch {
+          const decoded = JSON.parse(atob(access.split('.')[1]));
+          setGuest({ id: decoded.sub, email: decoded.email, full_name: decoded.full_name });
+        }
       } catch {
+        // Only clear session if the refresh token itself is invalid/expired
         localStorage.removeItem('guest_refresh_token');
       } finally {
         setLoading(false);

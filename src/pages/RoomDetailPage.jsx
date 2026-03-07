@@ -1,16 +1,29 @@
 // src/pages/RoomDetailPage.jsx — Pure Tailwind
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { roomsApi }   from '../services/api.js';
-import { useBooking } from '../hooks/useBooking.jsx';
-import hotelConfig    from '../config/hotel.config.js';
-import { fmt }        from '../utils/currency.js';
-import RoomGallery    from '../components/ui/RoomGallery.jsx';
+import { roomsApi }      from '../services/api.js';
+import { useBooking }    from '../hooks/useBooking.jsx';
+import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
+import { fmt }           from '../utils/currency.js';
+import RoomGallery       from '../components/ui/RoomGallery.jsx';
+
+// getRoomTypeById returns room.photos as [{url, room_number, room_id, floor}]
+// getRoomById returns room.media as [{url, type, path, ...}]
+// Handle both shapes so this works regardless of which endpoint was called
+const getMediaImages = (room) => {
+  if (!room) return [];
+  // room_type endpoint: photos array with url objects
+  if (room.photos?.length) return room.photos.map(p => p.url).filter(Boolean);
+  // individual room endpoint: media array with type field
+  if (room.media?.length) return room.media.filter(m => m.type === 'image' || m.type === 'gif').map(m => m.url);
+  return [];
+};
 
 export default function RoomDetailPage() {
-  const { id }       = useParams();
-  const navigate     = useNavigate();
-  const { dispatch } = useBooking();
+  const { id }        = useParams();
+  const navigate      = useNavigate();
+  const { dispatch }  = useBooking();
+  const hotelConfig   = useHotelConfig();   // live config, not static import
 
   const [room,    setRoom]    = useState(null);
   const [rates,   setRates]   = useState([]);
@@ -19,9 +32,9 @@ export default function RoomDetailPage() {
 
   const today    = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const [checkIn,  setCheckIn]  = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [guests,   setGuests]   = useState(1);
+  const [checkIn,   setCheckIn]   = useState('');
+  const [checkOut,  setCheckOut]  = useState('');
+  const [guests,    setGuests]    = useState(1);
   const [dateError, setDateError] = useState('');
 
   const numNights = checkIn && checkOut
@@ -62,6 +75,8 @@ export default function RoomDetailPage() {
     </div>
   );
 
+  const images = getMediaImages(room);
+
   return (
     <div className="pb-24">
       {/* Page header */}
@@ -77,14 +92,15 @@ export default function RoomDetailPage() {
         </div>
       </div>
 
-      {/* Gallery */}
+      {/* Gallery — passes extracted image URLs */}
       <div className="container py-8">
-        <RoomGallery images={room.images || []} videoUrl={room.video_url || null} roomName={room.name} />
+        <RoomGallery images={images} videoUrl={room.video_url || null} roomName={room.name} />
       </div>
 
       {/* Content */}
       <div className="container">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
           {/* Main */}
           <div className="lg:col-span-2 flex flex-col gap-10">
             {room.description && (
@@ -125,6 +141,33 @@ export default function RoomDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Policies from live config */}
+            {(hotelConfig.policies?.cancellation || hotelConfig.policies?.pets || hotelConfig.policies?.smoking) && (
+              <div>
+                <h2 className="font-display text-2xl font-medium mb-4">Policies</h2>
+                <div className="flex flex-col gap-3">
+                  {hotelConfig.policies.cancellation && (
+                    <div className="p-4 border border-border rounded-lg">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Cancellation</p>
+                      <p className="text-sm text-muted leading-relaxed">{hotelConfig.policies.cancellation}</p>
+                    </div>
+                  )}
+                  {hotelConfig.policies.pets && (
+                    <div className="p-4 border border-border rounded-lg">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Pets</p>
+                      <p className="text-sm text-muted leading-relaxed">{hotelConfig.policies.pets}</p>
+                    </div>
+                  )}
+                  {hotelConfig.policies.smoking && (
+                    <div className="p-4 border border-border rounded-lg">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Smoking</p>
+                      <p className="text-sm text-muted leading-relaxed">{hotelConfig.policies.smoking}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Booking sidebar */}
@@ -152,7 +195,9 @@ export default function RoomDetailPage() {
                 <div className="flex flex-col gap-1">
                   <label className="form-label">Guests</label>
                   <select className="input" value={guests} onChange={e => setGuests(Number(e.target.value))}>
-                    {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>)}
+                    {Array.from({ length: room.max_occupancy || 6 }, (_, i) => i + 1).map(n => (
+                      <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -173,10 +218,20 @@ export default function RoomDetailPage() {
               <p className="text-xs text-center text-muted">Best rate guaranteed when booking direct</p>
 
               <div className="flex justify-center gap-3 text-xs text-muted">
-                <a href={`tel:${hotelConfig.contact.phone}`} className="hover:text-secondary transition-colors">{hotelConfig.contact.phone}</a>
+                <a href={`tel:${hotelConfig.contact.phone}`} className="hover:text-secondary transition-colors">
+                  {hotelConfig.contact.phone}
+                </a>
                 <span>or</span>
-                <a href={`mailto:${hotelConfig.contact.email}`} className="hover:text-secondary transition-colors">Email us</a>
+                <a href={`mailto:${hotelConfig.contact.email}`} className="hover:text-secondary transition-colors">
+                  Email us
+                </a>
               </div>
+
+              {hotelConfig.contact.checkIn && (
+                <p className="text-xs text-center text-muted">
+                  Check-in from {hotelConfig.contact.checkIn} · Check-out by {hotelConfig.contact.checkOut}
+                </p>
+              )}
             </div>
           </aside>
         </div>

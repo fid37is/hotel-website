@@ -10,6 +10,20 @@ const fmt = (n) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(n);
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80&auto=format&fit=crop';
+// API returns room.media (array of {url, type}), not room.images
+const getRoomImage = (room) => {
+  const media = room.media || [];
+  const img = media.find(m => m.type === 'image' || m.type === 'gif');
+  return img?.url || PLACEHOLDER_IMG;
+};
+
+// API returns room.number not room.room_number
+const getRoomName = (room) => {
+  if (room.name) return room.name;
+  if (room.number) return `Room ${room.number}`;
+  return room.room_types?.name || 'Room';
+};
+
 
 export default function RoomsPage() {
   const hotelConfig = useHotelConfig();
@@ -84,7 +98,13 @@ export default function RoomsPage() {
   };
 
   const handleBook = (room) => {
-    dispatch({ type: 'SELECT_ROOM', payload: { room, rate: room.rate_plans?.[0] || null } });
+    // Pre-fill search with room type but don't skip step 0 — guest still needs to pick dates
+    dispatch({ type: 'SET_SEARCH', payload: {
+      checkIn:      state.search.checkIn  || '',
+      checkOut:     state.search.checkOut || '',
+      guests:       state.search.guests   || 1,
+      preselectedTypeId: room.type_id || room.room_type_id || room.id,
+    }});
     navigate('/book');
   };
 
@@ -102,7 +122,7 @@ export default function RoomsPage() {
       }}>
         <div style={{ position: 'absolute', inset: 0, opacity: 0.06, backgroundImage: 'linear-gradient(135deg, #c9a96e 0%, transparent 55%)' }} />
         <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative' }}>
-          <span style={{ color: '#c9a96e', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500, display: 'block', marginBottom: 12 }}>
+          <span style={{ color: 'var(--clr-secondary, #c9a96e)', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500, display: 'block', marginBottom: 12 }}>
             Accommodation
           </span>
           <h1 className="font-display text-white" style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)', fontWeight: 400, lineHeight: 1 }}>
@@ -179,7 +199,7 @@ export default function RoomsPage() {
                   {' '}for <strong style={{ color: '#1a1a1a' }}>{state.search.checkIn}</strong>
                   {' — '}<strong style={{ color: '#1a1a1a' }}>{state.search.checkOut}</strong>
                   {' · '}{state.search.guests} guest{state.search.guests > 1 ? 's' : ''}
-                  {activeTab !== 'All' && <span style={{ color: '#c9a96e' }}> · {activeTab}</span>}
+                  {activeTab !== 'All' && <span style={{ color: 'var(--clr-secondary, #c9a96e)' }}> · {activeTab}</span>}
                 </p>
               )}
             </div>
@@ -196,7 +216,7 @@ export default function RoomsPage() {
                 {suggestedTabs.map(t => (
                   <button key={t} onClick={() => handleTabClick(t)} style={{
                     fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase',
-                    border: '1px solid #c9a96e', color: '#c9a96e',
+                    border: '1px solid #c9a96e', color: 'var(--clr-secondary, #c9a96e)',
                     padding: '7px 16px', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
                   }}>
                     {t}
@@ -220,7 +240,7 @@ export default function RoomsPage() {
                   index={i}
                   hasSearch={hasSearch}
                   onBook={() => handleBook(room)}
-                  onViewDetails={() => navigate(`/rooms/${room.room_type_id || room.id}`)}
+                  onViewDetails={() => navigate(`/rooms/${room.type_id || room.room_type_id || room.id}`)}
                   fmt={fmt}
                 />
               ))}
@@ -232,7 +252,7 @@ export default function RoomsPage() {
               </p>
               <p style={{ color: '#9a8c7a', fontSize: 14, marginBottom: 24 }}>
                 Try different dates or{' '}
-                <a href={`tel:${hotelConfig.contact.phone}`} style={{ color: '#c9a96e', textDecoration: 'underline' }}>
+                <a href={`tel:${hotelConfig.contact.phone}`} style={{ color: 'var(--clr-secondary, #c9a96e)', textDecoration: 'underline' }}>
                   call us directly
                 </a>{' '}— we may be able to help.
               </p>
@@ -257,7 +277,7 @@ export default function RoomsPage() {
 function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
   const [hovered, setHovered] = useState(false);
   const typeName = room.room_types?.name || room.room_type?.name || '';
-  const img      = room.images?.[0] || PLACEHOLDER_IMG;
+  const img      = getRoomImage(room);
   const baseRate = room.rate_plans?.[0]?.base_rate || room.rate_plans?.[0]?.rate || room.room_types?.base_rate || room.base_rate;
   const isAvail  = !hasSearch || room.available !== false;
 
@@ -267,7 +287,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
       onMouseLeave={() => setHovered(false)}
       style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', cursor: 'pointer', opacity: isAvail ? 1 : 0.5 }}
     >
-      <img src={img} alt={room.name || room.room_number}
+      <img src={img} alt={getRoomName(room)}
         style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
           transform: hovered && isAvail ? 'scale(1.05)' : 'scale(1)',
@@ -290,7 +310,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
       {/* Room type badge */}
       {typeName && (
         <div style={{ position: 'absolute', top: 18, left: 18, zIndex: 6 }}>
-          <span style={{ fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a96e', border: '1px solid rgba(201,169,110,0.4)', padding: '4px 10px' }}>
+          <span style={{ fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'var(--clr-secondary, #c9a96e)', border: '1px solid rgba(201,169,110,0.4)', padding: '4px 10px' }}>
             {typeName}
           </span>
         </div>
@@ -304,7 +324,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
       {/* Info */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, zIndex: 6 }}>
         <h3 className="font-display text-white" style={{ fontSize: 20, fontWeight: 300, lineHeight: 1.2, marginBottom: 4 }}>
-          {room.name || `Room ${room.room_number}`}
+          {getRoomName(room)}
         </h3>
         {room.floor && (
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginBottom: 6 }}>Floor {room.floor}</p>
@@ -320,7 +340,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
           {baseRate && (
             <div>
-              <span style={{ color: '#c9a96e', fontSize: 15, fontWeight: 300 }}>{fmt(baseRate)}</span>
+              <span style={{ color: 'var(--clr-secondary, #c9a96e)', fontSize: 15, fontWeight: 300 }}>{fmt(baseRate)}</span>
               <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginLeft: 4 }}>/night</span>
             </div>
           )}
@@ -334,7 +354,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
             {isAvail && (
               <button onClick={(e) => { e.stopPropagation(); onBook(); }} style={{
                 fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
-                background: '#c9a96e', color: '#fff',
+                background: 'var(--clr-secondary, #c9a96e)', color: '#fff',
                 padding: '6px 12px', cursor: 'pointer', border: 'none', fontFamily: 'inherit',
                 transition: 'background 0.2s',
               }}>Book</button>

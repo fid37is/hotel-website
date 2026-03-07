@@ -33,12 +33,14 @@ export function ChatProvider({ children, guestToken }) {
     s.on('connect',    () => setConnected(true));
     s.on('disconnect', () => setConnected(false));
 
+    // Deduplicate — sendMessage already adds the message optimistically,
+    // so ignore the socket echo if the message id is already in state.
     s.on('new_message', ({ conversationId, message }) => {
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: [...(prev[conversationId] || []), message],
-      }));
-      // Update last_message_at on conversation
+      setMessages(prev => {
+        const existing = prev[conversationId] || [];
+        if (existing.find(m => m.id === message.id)) return prev;
+        return { ...prev, [conversationId]: [...existing, message] };
+      });
       setConversations(prev => prev.map(c =>
         c.id === conversationId ? { ...c, last_message_at: message.created_at } : c
       ));
@@ -87,7 +89,7 @@ export function ChatProvider({ children, guestToken }) {
     // Join the socket room
     if (socket) socket.emit('join_conversation', { conversationId: convo.id });
 
-    // Load messages
+    // Load messages for the new conversation
     await loadMessages(convo.id);
     setActiveConvId(convo.id);
 
@@ -106,10 +108,12 @@ export function ChatProvider({ children, guestToken }) {
   const sendMessage = useCallback(async (conversationId, content) => {
     const res = await chatApi.sendMessage(conversationId, content, guestToken);
     const message = res.data;
-    setMessages(prev => ({
-      ...prev,
-      [conversationId]: [...(prev[conversationId] || []), message],
-    }));
+    // Add optimistically — socket echo will be ignored due to dedup above
+    setMessages(prev => {
+      const existing = prev[conversationId] || [];
+      if (existing.find(m => m.id === message.id)) return prev;
+      return { ...prev, [conversationId]: [...existing, message] };
+    });
     return message;
   }, [guestToken]);
 

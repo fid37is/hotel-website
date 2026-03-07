@@ -19,7 +19,10 @@ const request = async (method, path, { body, params, token } = {}) => {
     });
   }
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-API-Key': import.meta.env.VITE_HMS_API_KEY || '',
+  };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(url.toString(), {
@@ -120,9 +123,6 @@ export const guestAuthApi = {
 
   me: (token) =>
     request('GET', '/auth/me', { token }),
-
-  updateMe: (payload, token) =>
-  request('PATCH', '/auth/me', { body: payload, token }),
 
   myReservations: (token) =>
     request('GET', '/auth/my-reservations', { token }),
