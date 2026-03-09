@@ -10,7 +10,7 @@ import { guestAuthApi } from '../services/api.js';
 const GuestAuthContext = createContext(null);
 
 export const GuestAuthProvider = ({ children }) => {
-  const [guest,   setGuest]   = useState(null);   // { id, full_name, email, phone }
+  const [guest,   setGuest]   = useState(null);   // { id, full_name, email, phone, ... }
   const [token,   setToken]   = useState(null);   // access token (memory only)
   const [loading, setLoading] = useState(true);   // restoring session
 
@@ -21,13 +21,21 @@ export const GuestAuthProvider = ({ children }) => {
       if (!refreshToken) { setLoading(false); return; }
 
       try {
-        const res = await guestAuthApi.refresh(refreshToken);
-        setToken(res.data.access_token);
+        const res    = await guestAuthApi.refresh(refreshToken);
+        const access = res.data.access_token;
+        setToken(access);
 
-        // Get profile with new access token
-        const profile = await guestAuthApi.me(res.data.access_token);
-        setGuest(profile.data);
+        // Fetch full profile — if it fails, fall back to JWT payload so
+        // the user stays logged in even if /auth/me is temporarily unavailable.
+        try {
+          const profile = await guestAuthApi.me(access);
+          setGuest(profile.data);
+        } catch {
+          const decoded = JSON.parse(atob(access.split('.')[1]));
+          setGuest({ id: decoded.sub, email: decoded.email, full_name: decoded.full_name });
+        }
       } catch {
+        // Only clear session if the refresh token itself is invalid/expired
         localStorage.removeItem('guest_refresh_token');
       } finally {
         setLoading(false);
@@ -54,6 +62,13 @@ export const GuestAuthProvider = ({ children }) => {
     return res.data;
   }, []);
 
+  // ── Update profile ─────────────────────────────────────────────────────────
+  const updateProfile = useCallback(async (payload) => {
+    const res = await guestAuthApi.updateMe(payload, token);
+    setGuest(prev => ({ ...prev, ...res.data })); // merge updated fields into local state
+    return res.data;
+  }, [token]);
+
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     setGuest(null);
@@ -64,7 +79,10 @@ export const GuestAuthProvider = ({ children }) => {
   const isLoggedIn = !!guest && !!token;
 
   return (
-    <GuestAuthContext.Provider value={{ guest, token, loading, isLoggedIn, login, register, logout }}>
+    <GuestAuthContext.Provider value={{
+      guest, token, loading, isLoggedIn,
+      login, register, logout, updateProfile,
+    }}>
       {children}
     </GuestAuthContext.Provider>
   );

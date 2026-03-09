@@ -1,169 +1,186 @@
-// src/pages/ConfirmationPage.jsx — Pure Tailwind
-import { useEffect, useState } from 'react';
-import { Link, useNavigate }   from 'react-router-dom';
-import { useBooking }          from '../hooks/useBooking.jsx';
-import { useGuestAuth }        from '../hooks/useGuestAuth.jsx';
-import { useHotelConfig }      from '../hooks/useHotelConfig.jsx';
+// hotel-website/src/pages/ConfirmationPage.jsx — Pure Tailwind
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useBooking }     from '../hooks/useBooking.jsx';
+import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
+import { fmt }            from '../utils/currency.js';
+
+const nights = (ci, co) => (!ci || !co) ? 0
+  : Math.max(0, Math.round((new Date(co) - new Date(ci)) / 86400000));
 
 export default function ConfirmationPage() {
-  const hotelConfig = useHotelConfig();
+  const navigate    = useNavigate();
   const { state, dispatch } = useBooking();
-  const { isLoggedIn, register } = useGuestAuth();
-  const navigate = useNavigate();
-  const res = state.confirmedReservation;
+  const hotelConfig = useHotelConfig();
+  const { confirmation, selectedRoom, selectedRate, search, guestDetails } = state;
 
-  const [showAccountPrompt, setShowAccountPrompt] = useState(false);
-  const [password,     setPassword]     = useState('');
-  const [confirmPass,  setConfirmPass]  = useState('');
-  const [accountError, setAccountError] = useState('');
-  const [creating,     setCreating]     = useState(false);
-  const [accountDone,  setAccountDone]  = useState(false);
-
-  const guestEmail = res?.guest?.email || state.guestDetails?.email;
-  const guestName  = res?.guest?.first_name
-    ? `${res.guest.first_name} ${res.guest.last_name || ''}`.trim()
-    : `${state.guestDetails?.firstName || ''} ${state.guestDetails?.lastName || ''}`.trim();
+  useEffect(() => {
+    if (!confirmation?.reservation) navigate('/book');
+  }, [confirmation]);
 
   useEffect(() => {
     document.title = `Booking Confirmed | ${hotelConfig.shortName}`;
-    if (!res) navigate('/book');
-    if (res && !isLoggedIn) {
-      const t = setTimeout(() => setShowAccountPrompt(true), 1200);
-      return () => clearTimeout(t);
-    }
-  }, [res, hotelConfig.shortName]);
+  }, [hotelConfig.shortName]);
 
-  const handleCreateAccount = async () => {
-    setAccountError('');
-    if (password.length < 8)     { setAccountError('Password must be at least 8 characters.'); return; }
-    if (password !== confirmPass) { setAccountError('Passwords do not match.'); return; }
-    setCreating(true);
-    try {
-      await register({ full_name: guestName, email: guestEmail, phone: state.guestDetails?.phone || '', password });
-      setAccountDone(true);
-    } catch (err) {
-      if (err.status === 409) {
-        setAccountError('An account with this email already exists. Sign in to view your booking.');
-      } else {
-        setAccountError(err.message || 'Could not create account. Please try again.');
-      }
-    } finally { setCreating(false); }
+  if (!confirmation?.reservation) return null;
+
+  const res           = confirmation.reservation;
+  const paymentMethod = confirmation.paymentMethod || 'on_arrival';
+  const numNights     = nights(res.check_in_date, res.check_out_date);
+  const ratePerNight  = selectedRate?.base_rate ?? selectedRoom?.base_rate ?? 0;
+  const totalAmount   = ratePerNight * numNights;
+  const isBankTransfer = paymentMethod === 'bank_transfer';
+  const isPaystack     = paymentMethod === 'paystack';
+
+  const handleDone = () => {
+    dispatch({ type: 'RESET' });
+    navigate('/');
   };
 
-  if (!res) return null;
-
   return (
-    <div className="min-h-screen bg-bg pt-nav pb-16">
+    <div className="bg-bg min-h-screen pt-nav pb-16">
       <div className="container max-w-2xl">
-        <div className="bg-surface rounded-lg border border-border p-8 lg:p-10 flex flex-col gap-8">
 
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="28" height="28" className="text-green-600">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </div>
-            <div>
-              <h1 className="font-display text-4xl font-medium mb-2">Booking Confirmed!</h1>
-              <p className="text-sm text-muted">
-                Thank you, <strong className="text-primary">{guestName}</strong>.
-                A confirmation has been sent to <strong className="text-primary">{guestEmail}</strong>.
-              </p>
-            </div>
+        {/* Status banner */}
+        <div className={`rounded-xl p-6 mb-8 text-center ${isBankTransfer ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl
+            ${isBankTransfer ? 'bg-amber-100' : 'bg-green-100'}`}>
+            {isBankTransfer ? '🏦' : '✓'}
           </div>
+          <h1 className="font-display text-3xl font-medium mb-2">
+            {isBankTransfer ? 'Booking Received' : 'Booking Confirmed!'}
+          </h1>
+          <p className="text-muted text-sm">
+            {isBankTransfer
+              ? 'Your reservation is held — please complete your bank transfer to confirm it.'
+              : isPaystack
+              ? 'Payment received. Your reservation is fully confirmed.'
+              : 'We look forward to welcoming you. Payment is due at check-in.'}
+          </p>
+          {res.id && (
+            <p className="mt-3 text-xs text-muted">
+              Booking reference: <strong className="font-mono text-primary">{res.id.slice(0, 8).toUpperCase()}</strong>
+            </p>
+          )}
+        </div>
 
-          <div className="bg-bg rounded-lg p-5 text-center border border-border">
-            <p className="text-xs text-muted uppercase tracking-widest mb-2">Booking Reference</p>
-            <p className="font-mono text-2xl font-medium text-secondary tracking-widest">
-              {res.reservation_no || res.confirmation_number || res.id}
+        {/* Bank Transfer instructions */}
+        {isBankTransfer && hotelConfig.payment?.bankName && (
+          <div className="bg-surface border border-border rounded-lg p-6 mb-6">
+            <h2 className="font-display text-lg font-medium mb-4">Complete Your Payment</h2>
+            <p className="text-sm text-muted mb-4">
+              Please transfer the amount below to our account within <strong>24 hours</strong> to
+              secure your reservation. Send your proof of payment to our email.
+            </p>
+            <div className="bg-bg rounded-lg p-4 flex flex-col gap-3 mb-4">
+              {[
+                ['Bank',           hotelConfig.payment.bankName],
+                ['Account Number', hotelConfig.payment.bankAccountNumber],
+                ['Account Name',   hotelConfig.payment.bankAccountName],
+                ['Amount',         fmt(totalAmount)],
+                ['Reference',      `${guestDetails.lastName || ''} ${res.id?.slice(0,8).toUpperCase() || ''}`.trim()],
+              ].map(([label, value]) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-muted">{label}</span>
+                  <strong className={`text-right font-mono ${label === 'Amount' ? 'text-secondary' : 'text-primary'}`}>
+                    {value}
+                  </strong>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted">
+              After transferring, send proof to{' '}
+              <a href={`mailto:${hotelConfig.contact?.email}?subject=Payment proof - ${res.id?.slice(0,8).toUpperCase()}`}
+                className="text-secondary hover:underline">
+                {hotelConfig.contact?.email}
+              </a>
+              {' '}or WhatsApp{' '}
+              <a href={`https://wa.me/${hotelConfig.contact?.whatsapp?.replace(/\D/g,'')}`}
+                className="text-secondary hover:underline" target="_blank" rel="noreferrer">
+                {hotelConfig.contact?.whatsapp}
+              </a>.
             </p>
           </div>
+        )}
 
+        {/* Booking summary */}
+        <div className="bg-surface border border-border rounded-lg p-6 mb-6">
+          <h2 className="font-display text-lg font-medium mb-4">Your Booking</h2>
           <div className="flex flex-col gap-3">
             {[
-              ['Room',      state.selectedRoom?.name],
-              ['Check-in',  state.search.checkIn],
-              ['Check-out', state.search.checkOut],
-              ['Guests',    state.search.guests],
-              ['Status',    res.status || 'Confirmed'],
+              ['Room Type',  selectedRoom?.name || res.room_type_id],
+              ['Rate Plan',  selectedRate?.name || 'Standard'],
+              ['Check-in',   `${res.check_in_date}${hotelConfig.contact?.checkIn ? ` from ${hotelConfig.contact.checkIn}` : ''}`],
+              ['Check-out',  `${res.check_out_date}${hotelConfig.contact?.checkOut ? ` by ${hotelConfig.contact.checkOut}` : ''}`],
+              ['Duration',   `${numNights} night${numNights !== 1 ? 's' : ''}`],
+              ['Guests',     search.guests || 1],
+              ['Payment',    paymentMethod === 'on_arrival' ? 'Pay on Arrival'
+                           : paymentMethod === 'bank_transfer' ? 'Bank Transfer'
+                           : 'Paid by Card'],
             ].map(([label, value]) => (
-              <div key={label} className="flex justify-between text-sm py-2 border-b border-border">
+              <div key={label} className="flex justify-between text-sm border-b border-border pb-2 last:border-0 last:pb-0">
                 <span className="text-muted">{label}</span>
-                <strong className={label === 'Status' ? 'text-green-600' : 'text-primary'}>{value}</strong>
+                <strong className="text-primary text-right">{value}</strong>
+              </div>
+            ))}
+            {totalAmount > 0 && (
+              <div className="flex justify-between text-sm pt-1">
+                <span className="font-medium">Estimated Total</span>
+                <strong className="text-secondary">{fmt(totalAmount)}</strong>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Guest details */}
+        <div className="bg-surface border border-border rounded-lg p-6 mb-8">
+          <h2 className="font-display text-lg font-medium mb-4">Guest Details</h2>
+          <div className="flex flex-col gap-2 text-sm">
+            {[
+              ['Name',  `${guestDetails.firstName} ${guestDetails.lastName}`],
+              ['Email', guestDetails.email],
+              ['Phone', guestDetails.phone],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between">
+                <span className="text-muted">{label}</span>
+                <strong>{value}</strong>
               </div>
             ))}
           </div>
-
-          <div className="bg-secondary/10 rounded-lg p-4 text-sm text-center">
-            <p><strong>Check-in:</strong> {hotelConfig.contact.checkIn} &nbsp;|&nbsp; <strong>Check-out:</strong> {hotelConfig.contact.checkOut}</p>
-            <p className="text-muted mt-1">{hotelConfig.contact.address}</p>
-          </div>
-
-          {showAccountPrompt && !isLoggedIn && (
-            <div className="border border-border rounded-lg p-5">
-              {!accountDone ? (
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-bg border border-border flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Save your booking to an account</p>
-                      <p className="text-xs text-muted">Manage, view and cancel bookings anytime</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-4">
-                    <div className="form-group">
-                      <label className="form-label">Email</label>
-                      <input className="input opacity-60 cursor-not-allowed" value={guestEmail} disabled />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Set a password</label>
-                      <input type="password" className="input" placeholder="Min. 8 characters"
-                        value={password} onChange={e => setPassword(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Confirm password</label>
-                      <input type="password" className="input" placeholder="Repeat password"
-                        value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
-                    </div>
-                    {accountError && <p className="form-error">{accountError}</p>}
-                    <button className="btn btn--primary w-full justify-center" onClick={handleCreateAccount} disabled={creating}>
-                      {creating ? 'Creating account…' : 'Create Account'}
-                    </button>
-                  </div>
-                  <button className="text-xs text-muted hover:text-primary transition-colors text-center"
-                    onClick={() => setShowAccountPrompt(false)}>
-                    No thanks, I'll use my reference number
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Account created! You can now <Link to="/account" className="underline ml-1">view your booking</Link> anytime.
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex gap-3 justify-center">
-            {(isLoggedIn || accountDone) && (
-              <Link to="/account" className="btn btn--outline">View My Bookings</Link>
-            )}
-            <Link to="/" className="btn btn--primary" onClick={() => dispatch({ type: 'RESET_BOOKING' })}>
-              Back to Home
-            </Link>
-          </div>
-
-          <p className="text-xs text-center text-muted">
-            Questions? Call us at{' '}
-            <a href={`tel:${hotelConfig.contact.phone}`} className="text-secondary hover:underline">{hotelConfig.contact.phone}</a>
-          </p>
         </div>
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button className="btn btn--outline" onClick={() => window.print()}>
+            Print / Save PDF
+          </button>
+          {hotelConfig.contact?.whatsapp && (
+            <a
+              href={`https://wa.me/${hotelConfig.contact.whatsapp.replace(/\D/g,'')}?text=${encodeURIComponent(
+                `Hi, I just booked. Reference: ${res.id?.slice(0,8).toUpperCase()}. Check-in: ${res.check_in_date}.`
+              )}`}
+              target="_blank" rel="noreferrer"
+              className="btn btn--outline text-center">
+              WhatsApp Us
+            </a>
+          )}
+          <button className="btn btn--primary" onClick={handleDone}>
+            Back to Home
+          </button>
+        </div>
+
+        {/* Contact */}
+        <p className="text-center text-xs text-muted mt-8">
+          Questions? Call{' '}
+          <a href={`tel:${hotelConfig.contact?.phone}`} className="text-secondary hover:underline">
+            {hotelConfig.contact?.phone}
+          </a>
+          {' '}or email{' '}
+          <a href={`mailto:${hotelConfig.contact?.email}`} className="text-secondary hover:underline">
+            {hotelConfig.contact?.email}
+          </a>
+        </p>
+
       </div>
     </div>
   );

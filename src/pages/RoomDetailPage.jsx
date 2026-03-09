@@ -1,27 +1,49 @@
 // src/pages/RoomDetailPage.jsx — Pure Tailwind
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { roomsApi }   from '../services/api.js';
-import { useBooking } from '../hooks/useBooking.jsx';
-import hotelConfig    from '../config/hotel.config.js';
-import { fmt }        from '../utils/currency.js';
-import RoomGallery    from '../components/ui/RoomGallery.jsx';
+import { roomsApi }      from '../services/api.js';
+import { useBooking }    from '../hooks/useBooking.jsx';
+import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
+import { fmt }           from '../utils/currency.js';
+import RoomGallery       from '../components/ui/RoomGallery.jsx';
+
+// Type-level marketing images — from type.photos (set by admin in HMS Room Types)
+const getTypeImages = (type) => {
+  if (!type) return [];
+  return (type.photos || []).map(p => p.url).filter(Boolean);
+};
+
+// Individual room images — from room.media
+const getRoomImages = (room) => {
+  if (!room) return [];
+  return (room.media || [])
+    .filter(m => m.type === 'image' || m.type === 'gif')
+    .map(m => m.url);
+};
+
+const getRoomVideo = (room) => {
+  if (!room) return null;
+  return (room.media || []).find(m => m.type === 'video')?.url || null;
+};
 
 export default function RoomDetailPage() {
-  const { id }       = useParams();
-  const navigate     = useNavigate();
-  const { dispatch } = useBooking();
+  const { id }        = useParams();
+  const navigate      = useNavigate();
+  const { dispatch }  = useBooking();
+  const hotelConfig   = useHotelConfig();   // live config, not static import
 
-  const [room,    setRoom]    = useState(null);
-  const [rates,   setRates]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [room,            setRoom]            = useState(null);
+  const [rates,           setRates]           = useState([]);
+  const [individualRooms, setIndividualRooms] = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState('');
+  const [activeRoomIdx,   setActiveRoomIdx]   = useState(0);
 
   const today    = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const [checkIn,  setCheckIn]  = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [guests,   setGuests]   = useState(1);
+  const [checkIn,   setCheckIn]   = useState('');
+  const [checkOut,  setCheckOut]  = useState('');
+  const [guests,    setGuests]    = useState(1);
   const [dateError, setDateError] = useState('');
 
   const numNights = checkIn && checkOut
@@ -29,11 +51,17 @@ export default function RoomDetailPage() {
     : 0;
 
   useEffect(() => {
-    Promise.all([roomsApi.getTypeById(id), roomsApi.getRates(id)])
+    Promise.all([
+      roomsApi.getTypeById(id),
+      roomsApi.getRates(id),
+    ])
       .then(([roomRes, ratesRes]) => {
-        setRoom(roomRes.data);
+        const typeData = roomRes.data;
+        setRoom(typeData);
         setRates(ratesRes.data || []);
-        document.title = `${roomRes.data?.name} | ${hotelConfig.shortName}`;
+        // Individual rooms come back inside the type response
+        setIndividualRooms(typeData?.rooms || []);
+        document.title = `${typeData?.name} | ${hotelConfig.shortName}`;
       })
       .catch(() => setError('Room not found.'))
       .finally(() => setLoading(false));
@@ -62,6 +90,8 @@ export default function RoomDetailPage() {
     </div>
   );
 
+  const images = getTypeImages(room);
+
   return (
     <div className="pb-24">
       {/* Page header */}
@@ -77,14 +107,53 @@ export default function RoomDetailPage() {
         </div>
       </div>
 
-      {/* Gallery */}
+      {/* Hero gallery — room TYPE media (marketing images) */}
       <div className="container py-8">
-        <RoomGallery images={room.images || []} videoUrl={room.video_url || null} roomName={room.name} />
+        <RoomGallery images={images} videoUrl={room.video_url || null} roomName={room.name} />
       </div>
+
+      {/* Individual rooms section — each room's own photos */}
+      {individualRooms.length > 0 && individualRooms.some(r => r.media?.length > 0) && (
+        <div className="container pb-8">
+          <h2 className="font-display text-2xl font-medium mb-5">Our {room.name} Rooms</h2>
+          {/* Room selector tabs */}
+          <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+            {individualRooms.map((r, i) => (
+              <button key={r.id} onClick={() => setActiveRoomIdx(i)}
+                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all
+                  ${activeRoomIdx === i
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-border text-muted hover:border-secondary/50'}`}>
+                Room {r.number}
+                {r.floor ? <span className="text-xs opacity-60 ml-1">· Floor {r.floor}</span> : null}
+              </button>
+            ))}
+          </div>
+          {/* Active room gallery */}
+          {(() => {
+            const activeRoom = individualRooms[activeRoomIdx];
+            const roomImgs  = getRoomImages(activeRoom);
+            const roomVideo = getRoomVideo(activeRoom);
+            return (
+              <div>
+                <RoomGallery
+                  images={roomImgs}
+                  videoUrl={roomVideo}
+                  roomName={`Room ${activeRoom?.number}`}
+                />
+                {activeRoom?.notes && (
+                  <p className="text-xs text-muted mt-3 italic">{activeRoom.notes}</p>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Content */}
       <div className="container">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
           {/* Main */}
           <div className="lg:col-span-2 flex flex-col gap-10">
             {room.description && (
@@ -125,6 +194,33 @@ export default function RoomDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Policies from live config */}
+            {(hotelConfig.policies?.cancellation || hotelConfig.policies?.pets || hotelConfig.policies?.smoking) && (
+              <div>
+                <h2 className="font-display text-2xl font-medium mb-4">Policies</h2>
+                <div className="flex flex-col gap-3">
+                  {hotelConfig.policies.cancellation && (
+                    <div className="p-4 border border-border rounded-lg">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Cancellation</p>
+                      <p className="text-sm text-muted leading-relaxed">{hotelConfig.policies.cancellation}</p>
+                    </div>
+                  )}
+                  {hotelConfig.policies.pets && (
+                    <div className="p-4 border border-border rounded-lg">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Pets</p>
+                      <p className="text-sm text-muted leading-relaxed">{hotelConfig.policies.pets}</p>
+                    </div>
+                  )}
+                  {hotelConfig.policies.smoking && (
+                    <div className="p-4 border border-border rounded-lg">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Smoking</p>
+                      <p className="text-sm text-muted leading-relaxed">{hotelConfig.policies.smoking}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Booking sidebar */}
@@ -152,7 +248,9 @@ export default function RoomDetailPage() {
                 <div className="flex flex-col gap-1">
                   <label className="form-label">Guests</label>
                   <select className="input" value={guests} onChange={e => setGuests(Number(e.target.value))}>
-                    {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>)}
+                    {Array.from({ length: room.max_occupancy || 6 }, (_, i) => i + 1).map(n => (
+                      <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -173,10 +271,20 @@ export default function RoomDetailPage() {
               <p className="text-xs text-center text-muted">Best rate guaranteed when booking direct</p>
 
               <div className="flex justify-center gap-3 text-xs text-muted">
-                <a href={`tel:${hotelConfig.contact.phone}`} className="hover:text-secondary transition-colors">{hotelConfig.contact.phone}</a>
+                <a href={`tel:${hotelConfig.contact.phone}`} className="hover:text-secondary transition-colors">
+                  {hotelConfig.contact.phone}
+                </a>
                 <span>or</span>
-                <a href={`mailto:${hotelConfig.contact.email}`} className="hover:text-secondary transition-colors">Email us</a>
+                <a href={`mailto:${hotelConfig.contact.email}`} className="hover:text-secondary transition-colors">
+                  Email us
+                </a>
               </div>
+
+              {hotelConfig.contact.checkIn && (
+                <p className="text-xs text-center text-muted">
+                  Check-in from {hotelConfig.contact.checkIn} · Check-out by {hotelConfig.contact.checkOut}
+                </p>
+              )}
             </div>
           </aside>
         </div>

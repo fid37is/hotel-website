@@ -19,7 +19,10 @@ const request = async (method, path, { body, params, token } = {}) => {
     });
   }
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-API-Key': import.meta.env.VITE_HMS_API_KEY || '',
+  };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(url.toString(), {
@@ -41,9 +44,27 @@ const request = async (method, path, { body, params, token } = {}) => {
 };
 
 // ─── Rooms ────────────────────────────────────────────────────────────────────
+// Module-level cache — getTypes() hits the network exactly once per session.
+// All subsequent calls (HomePage, RoomsPage, etc.) get the same resolved promise.
+let _roomTypesCache = null;
+let _roomsCache = null;
+
 export const roomsApi = {
-  getTypes: () =>
-    request('GET', '/rooms/types'),
+  getTypes: () => {
+    if (!_roomTypesCache) _roomTypesCache = request('GET', '/rooms/types');
+    return _roomTypesCache;
+  },
+
+  // All individual rooms (for browsing — no date filter)
+  getAllRooms: ({ typeId } = {}) => {
+    if (!typeId) {
+      if (!_roomsCache) _roomsCache = request('GET', '/rooms');
+      return _roomsCache;
+    }
+    return request('GET', '/rooms', { params: { type_id: typeId } });
+  },
+
+  clearTypesCache: () => { _roomTypesCache = null; _roomsCache = null; },
 
   getTypeById: (id) =>
     request('GET', `/rooms/types/${id}`),
@@ -114,4 +135,31 @@ export const guestAuthApi = {
 
   resetPassword: ({ token, password }) =>
     request('POST', '/auth/reset-password', { body: { token, password } }),
+};
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+export const chatApi = {
+  getDepartments: () =>
+    request('GET', '/chat-departments'),
+
+  startConversation: (reservationId, departmentId, token) =>
+    request('POST', '/conversations', {
+      body: { reservation_id: reservationId, department_id: departmentId },
+      token,
+    }),
+
+  getConversations: (reservationId, token) =>
+    request('GET', '/conversations', {
+      params: { reservation_id: reservationId },
+      token,
+    }),
+
+  getMessages: (conversationId, token) =>
+    request('GET', `/conversations/${conversationId}/messages`, { token }),
+
+  sendMessage: (conversationId, content, token) =>
+    request('POST', `/conversations/${conversationId}/messages`, {
+      body: { content },
+      token,
+    }),
 };
