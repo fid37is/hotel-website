@@ -111,8 +111,15 @@ function mergeConfig(prev, d) {
     // Payment / financial
     payment: {
       ...prev.payment,
-      currency:       d.currency        || prev.payment.currency,
-      currencySymbol: d.currency_symbol || prev.payment.currencySymbol,
+      currency:          d.currency           || prev.payment.currency,
+      currencySymbol:    d.currency_symbol    || prev.payment.currencySymbol,
+      payOnArrival:      d.pay_on_arrival      ?? prev.payment.payOnArrival      ?? true,
+      bankTransfer:      d.bank_transfer       ?? prev.payment.bankTransfer       ?? false,
+      paystackEnabled:   d.paystack_enabled    ?? prev.payment.paystackEnabled    ?? false,
+      bankName:          d.bank_name           || prev.payment.bankName           || '',
+      bankAccountNumber: d.bank_account_number || prev.payment.bankAccountNumber  || '',
+      bankAccountName:   d.bank_account_name   || prev.payment.bankAccountName    || '',
+      paystackPublicKey: d.paystack_public_key  || prev.payment.paystackPublicKey  || '',
     },
 
     financial: {

@@ -1,518 +1,619 @@
-// src/pages/HomePage.jsx
-import { useEffect, useState } from 'react';
+// hotel-website/src/pages/HomePage.jsx
+// HMS Design System v1 — "Negative Space Luxury"
+// Fully driven by hotelConfig. One footer. Zero clutter.
+
+import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
 import { roomsApi } from '../services/api.js';
-import AvailabilitySearch from '../components/booking/AvailabilitySearch.jsx';
 
-const HERO_IMG  = 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1800&q=85&auto=format&fit=crop';
-const CTA_IMG   = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1600&q=85&auto=format&fit=crop';
-const SPLIT_IMG = 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=1200&q=85&auto=format&fit=crop';
-const ROOM_IMGS = [
-  'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=800&q=80&auto=format&fit=crop',
-];
-
-const EXPERIENCES = [
-  { num: '01', title: 'Culinary',    desc: 'Contemporary West African cuisine reimagined for the modern palate. Breakfast through late-night dining.' },
-  { num: '02', title: 'Wellness',    desc: 'A sanctuary of calm. Deep-tissue massage, hydrotherapy, and restorative treatments.' },
-  { num: '03', title: 'Gatherings', desc: 'Intimate boardrooms to grand ballrooms — every event orchestrated to perfection.' },
-  { num: '04', title: 'Concierge',  desc: 'Your personal Lagos guide. Transfers, reservations, private tours arranged seamlessly.' },
-];
-
-const STATS = [
-  { value: '147', unit: 'Rooms & Suites' },
-  { value: '24',  unit: 'Hour Service' },
-  { value: '3',   unit: 'Dining Venues' },
-  { value: '12',  unit: 'Years of Excellence' },
+const FALLBACK_HERO = 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1800&q=90&auto=format&fit=crop';
+const FALLBACK_ROOMS = [
+  'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=900&q=80&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1560347876-aeef00ee58a1?w=900&q=80&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=900&q=80&auto=format&fit=crop',
 ];
 
 const fmt = (n) =>
-  new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format((n || 0) / 100);
 
 export default function HomePage() {
-  const hotelConfig = useHotelConfig();
-  const navigate = useNavigate();
-  const [featuredRooms, setFeaturedRooms] = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [heroLoaded,    setHeroLoaded]    = useState(false);
+  const hotelConfig  = useHotelConfig();
+  const navigate     = useNavigate();
+  const [rooms,      setRooms]      = useState([]);
+  const [roomsReady, setRoomsReady] = useState(false);
+  const [heroLoaded, setHeroLoaded] = useState(false);
+  const scrollRef    = useRef(null);
+
+  const accent = hotelConfig.primaryColor || '#c9a96e';
+  const heroImg = hotelConfig.heroImage || FALLBACK_HERO;
 
   useEffect(() => {
-    document.title = hotelConfig.seo.defaultTitle;
+    document.title = hotelConfig.seo?.defaultTitle || hotelConfig.name;
     roomsApi.getTypes()
-      .then(res => setFeaturedRooms((res.data || []).slice(0, 3)))
+      .then(r => setRooms((r.data || []).slice(0, 6)))
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setRoomsReady(true));
   }, []);
 
-  const displayRooms = featuredRooms.length > 0 ? featuredRooms : [
-    { id: 0, name: 'Deluxe Room',        base_rate: 45000,  category: 'Standard', room_type: 'Deluxe',      description: 'Sun-drenched interiors with bespoke furnishings and city skyline views.' },
-    { id: 1, name: 'Executive Suite',    base_rate: 85000,  category: 'Premium',  room_type: 'Executive',   description: 'Expansive living quarters with a private terrace and dedicated butler service.' },
-    { id: 2, name: 'Presidential Suite', base_rate: 150000, category: 'Luxury',   room_type: 'Presidential',description: 'Two floors of curated luxury — the pinnacle of Lagos hospitality.' },
-  ];
+  // Split tagline: last word gets accent treatment
+  const words = (hotelConfig.tagline || 'Where Luxury Lives').split(' ');
+  const lastWord = words.pop();
+  const restWords = words.join(' ');
 
-  const handleRoomClick = (room) => {
-    const typeSlug = encodeURIComponent(room.name);
-    navigate(`/rooms?type=${typeSlug}`);
+  const scrollRooms = (dir) => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollBy({ left: dir * 420, behavior: 'smooth' });
   };
 
   return (
-    <div style={{ background: '#f5f3ef' }}>
+    <>
+      {/* ── DESIGN SYSTEM CSS VARS ─────────────────────────────────────── */}
+      <style>{`
+        :root {
+          --accent: ${accent};
+          --light: #faf9f7;
+          --dark: #0c0c0c;
+          --mid: #1a1a1a;
+          --muted: rgba(255,255,255,0.35);
+          --muted-dark: rgba(0,0,0,0.35);
+          --font-display: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
+        }
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
-        style={{ height: '100svh', minHeight: 600, marginTop: 'calc(var(--nav-h, 72px) * -1)' }}
-      >
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
-          style={{ backgroundImage: `url(${HERO_IMG})`, opacity: heroLoaded ? 1 : 0 }}
-        />
-        <img src={HERO_IMG} alt="" className="sr-only" onLoad={() => setHeroLoaded(true)} />
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
 
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 45%, rgba(0,0,0,0.08) 70%, transparent 100%)'
-        }} />
+        .hms-page { background: var(--dark); }
 
-        {/* Location tag — desktop only */}
-        <div
-          className="absolute hidden md:flex flex-col items-end gap-1"
-          style={{ top: 'calc(var(--nav-h, 72px) + 24px)', right: '2rem' }}
-        >
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase' }}>Victoria Island</span>
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase' }}>Lagos, Nigeria</span>
-        </div>
+        /* Hero */
+        @keyframes slowReveal {
+          from { opacity: 0; transform: scale(1.04); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
 
-        {/* Content — pinned to bottom */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 md:px-12 lg:px-16" style={{ paddingBottom: '2.5rem' }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        /* Room scroll */
+        .rooms-scroll {
+          display: flex;
+          gap: 3px;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          cursor: grab;
+        }
+        .rooms-scroll:active { cursor: grabbing; }
+        .rooms-scroll::-webkit-scrollbar { display: none; }
+        .room-card {
+          flex: 0 0 380px;
+          scroll-snap-align: start;
+          position: relative;
+          overflow: hidden;
+          aspect-ratio: 3/4;
+          cursor: pointer;
+        }
+        @media (max-width: 640px) {
+          .room-card { flex: 0 0 85vw; }
+        }
+        .room-card img {
+          width: 100%; height: 100%;
+          object-fit: cover;
+          transition: transform 0.9s cubic-bezier(0.16,1,0.3,1);
+          display: block;
+        }
+        .room-card:hover img { transform: scale(1.06); }
+        .room-card-overlay {
+          position: absolute; inset: 0;
+          background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 55%);
+        }
+        .room-card-body {
+          position: absolute; bottom: 0; left: 0; right: 0;
+          padding: 28px 24px;
+        }
+        .room-card-name {
+          font-family: var(--font-display);
+          font-size: 22px; font-weight: 300;
+          color: #fff; line-height: 1.2;
+          margin: 0 0 6px;
+        }
+        .room-card-rate {
+          font-size: 13px;
+          color: var(--accent);
+        }
+        .room-card-cta {
+          position: absolute; top: 20px; right: 20px;
+          width: 36px; height: 36px;
+          border: 1px solid rgba(255,255,255,0.2);
+          display: flex; align-items: center; justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s, border-color 0.3s;
+        }
+        .room-card:hover .room-card-cta {
+          opacity: 1;
+          border-color: var(--accent);
+        }
 
-            <div className="flex items-center gap-3 mb-4 md:mb-5">
-              <div style={{ width: 28, height: 1, background: '#c9a96e', flexShrink: 0 }} />
-              <span style={{ color: '#c9a96e', fontSize: 9, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500 }}>
-                Est. 2012 · Lagos
-              </span>
-            </div>
+        /* Section label */
+        .section-label {
+          font-size: 9px;
+          letter-spacing: 0.45em;
+          text-transform: uppercase;
+          color: var(--accent);
+          display: block;
+          margin-bottom: 16px;
+        }
 
-            <h1
-              className="font-display text-white"
-              style={{
-                fontSize: 'clamp(2.8rem, 9vw, 7.5rem)',
-                fontWeight: 400,
-                lineHeight: 0.95,
-                letterSpacing: '-0.01em',
-                marginBottom: 'clamp(1.5rem, 4vw, 2.5rem)',
-              }}
-            >
-              {hotelConfig.tagline.split(' ').map((word, i, arr) => (
-                <span
-                  key={i}
-                  style={{
-                    display: 'block',
-                    marginLeft: i % 2 === 1 ? '0.1em' : 0,
-                    fontStyle: i === arr.length - 1 ? 'italic' : 'normal',
-                  }}
-                >
-                  {word}
-                </span>
-              ))}
+        /* Divider line */
+        .accent-line {
+          width: 32px; height: 1px;
+          background: var(--accent);
+          display: block;
+        }
+
+        /* Story section */
+        .story-img {
+          position: absolute; inset: 0;
+          width: 100%; height: 100%;
+          object-fit: cover;
+          transition: transform 1.2s cubic-bezier(0.16,1,0.3,1);
+        }
+        .story-panel:hover .story-img {
+          transform: scale(1.03);
+        }
+      `}</style>
+
+      <div className="hms-page">
+
+        {/* ── HERO ───────────────────────────────────────────────────────── */}
+        <section style={{
+          position: 'relative',
+          height: '100svh', minHeight: 640,
+          marginTop: 'calc(var(--nav-h, 72px) * -1)',
+          overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {/* Photo */}
+          <img
+            src={heroImg}
+            alt=""
+            onLoad={() => setHeroLoaded(true)}
+            style={{
+              position: 'absolute', inset: 0,
+              width: '100%', height: '100%', objectFit: 'cover',
+              animation: heroLoaded ? 'slowReveal 2s ease-out forwards' : 'none',
+              opacity: heroLoaded ? 1 : 0,
+            }}
+          />
+
+          {/* Vignette — subtle, not dramatic */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.65) 100%)',
+          }} />
+
+          {/* Centered hero text */}
+          <div style={{
+            position: 'relative', zIndex: 2,
+            textAlign: 'center',
+            padding: '0 clamp(1.5rem, 6vw, 4rem)',
+          }}>
+            {/* Hotel name — small, spaced */}
+            <span className="section-label" style={{
+              color: 'rgba(255,255,255,0.5)',
+              animation: 'fadeUp 0.8s 0.3s both',
+            }}>
+              {hotelConfig.name}
+            </span>
+
+            {/* Tagline — large serif, last word in accent */}
+            <h1 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(3rem, 9vw, 8rem)',
+              fontWeight: 300,
+              lineHeight: 1,
+              letterSpacing: '-0.01em',
+              color: '#fff',
+              margin: '0 0 clamp(2rem, 5vh, 3.5rem)',
+              animation: 'fadeUp 0.9s 0.5s both',
+            }}>
+              {restWords}{' '}
+              <em style={{ color: accent, fontStyle: 'italic' }}>{lastWord}</em>
             </h1>
 
-            <div style={{ maxWidth: 780 }}>
-              <AvailabilitySearch />
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll cue — desktop */}
-        <div
-          className="absolute hidden md:flex flex-col items-center gap-2"
-          style={{ bottom: 28, right: '2rem' }}
-        >
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', writingMode: 'vertical-rl' }}>Scroll</span>
-          <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', animation: 'heroScroll 2s ease-in-out infinite' }} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Intro + Stats ────────────────────────────────────────────────── */}
-      <section className="px-5 md:px-12 lg:px-16" style={{ padding: 'clamp(3rem, 8vw, 6rem) clamp(1.25rem, 5vw, 4rem)', background: '#f5f3ef' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end mb-12 md:mb-20">
-            <div className="lg:col-span-7">
-              <span style={{ color: '#c9a96e', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500, display: 'block', marginBottom: 16 }}>
-                {hotelConfig.name}
-              </span>
-              <p
-                className="font-display"
-                style={{ fontSize: 'clamp(1.5rem, 3vw, 2.8rem)', fontWeight: 400, lineHeight: 1.18, color: '#1a1a1a' }}
+            {/* Two CTAs */}
+            <div style={{
+              display: 'flex', gap: 16,
+              justifyContent: 'center', flexWrap: 'wrap',
+              animation: 'fadeUp 0.8s 0.8s both',
+            }}>
+              <Link to="/book" style={{
+                display: 'inline-flex', alignItems: 'center',
+                background: accent, color: '#fff',
+                fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase',
+                padding: '14px 36px',
+                transition: 'opacity 0.2s, transform 0.2s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
               >
-                Where the spirit of Lagos meets<br className="hidden sm:block" />
-                {' '}the art of unhurried luxury —<br className="hidden sm:block" />
-                {' '}<em>a haven above the city.</em>
-              </p>
-            </div>
-
-            <div className="lg:col-span-5">
-              <p style={{ color: '#6b6b6b', lineHeight: 1.75, fontSize: 14, marginBottom: 24 }}>
-                {hotelConfig.description}
-              </p>
-              <Link
-                to="/rooms"
-                className="group inline-flex items-center gap-3"
-                style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1a1a1a' }}
+                Reserve
+              </Link>
+              <Link to="/rooms" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 10,
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase',
+                border: '1px solid rgba(255,255,255,0.2)',
+                padding: '14px 28px',
+                transition: 'color 0.2s, border-color 0.2s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
               >
-                <span>Explore Our Rooms</span>
-                <span
-                  className="transition-all duration-300 group-hover:w-14"
-                  style={{ display: 'inline-block', width: 28, height: 1, background: '#1a1a1a' }}
-                />
+                Explore Rooms
               </Link>
             </div>
           </div>
 
-          {/* Stats */}
-          <div
-            className="grid grid-cols-2 md:grid-cols-4"
-            style={{ borderTop: '1px solid #e8e4dc' }}
-          >
-            {STATS.map(({ value, unit }, i) => (
-              <div
-                key={unit}
-                style={{
-                  paddingTop: 24,
-                  paddingRight: 24,
-                  paddingBottom: 8,
-                  borderRight: i < STATS.length - 1 ? '1px solid #e8e4dc' : 'none',
-                  borderBottom: i < 2 ? '1px solid #e8e4dc' : 'none',
-                }}
-                className="md:[border-bottom:none!important]"
-              >
-                <p className="font-display" style={{ fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', fontWeight: 300, lineHeight: 1, color: '#1a1a1a', marginBottom: 6 }}>
-                  {value}
-                </p>
-                <p style={{ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#c9a96e' }}>{unit}</p>
-              </div>
-            ))}
+          {/* Bottom-left location */}
+          <div style={{
+            position: 'absolute', bottom: 32, left: 'clamp(1.5rem,5vw,4rem)',
+            animation: 'fadeUp 0.8s 1s both',
+          }}>
+            <span style={{
+              fontSize: 9, letterSpacing: '0.4em',
+              color: 'rgba(255,255,255,0.3)',
+              textTransform: 'uppercase',
+            }}>
+              {hotelConfig.contact?.address?.split(',').slice(-2).join(',').trim()}
+            </span>
           </div>
-        </div>
-      </section>
 
-      {/* ── Rooms — dark section ─────────────────────────────────────────── */}
-      <section style={{ background: '#111', padding: 'clamp(3rem, 7vw, 5rem) clamp(1.25rem, 5vw, 4rem)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          {/* Bottom-right scroll hint */}
+          <div style={{
+            position: 'absolute', bottom: 28, right: 'clamp(1.5rem,5vw,4rem)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+            animation: 'fadeUp 0.8s 1.2s both',
+          }}>
+            <div style={{
+              width: 1, height: 52,
+              background: 'rgba(255,255,255,0.12)',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'rgba(255,255,255,0.45)',
+                animation: 'fadeUp 2s ease-in-out infinite',
+              }} />
+            </div>
+          </div>
+        </section>
 
-          <div className="flex items-end justify-between mb-8 md:mb-12">
+        {/* ── INTRO — light section ───────────────────────────────────────── */}
+        <section style={{
+          background: 'var(--light)',
+          padding: 'clamp(5rem,10vw,9rem) clamp(1.5rem,6vw,5rem)',
+        }}>
+          <div style={{ maxWidth: 1300, margin: '0 auto' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 'clamp(3rem, 8vw, 8rem)',
+              alignItems: 'end',
+            }}>
+              {/* Left — big editorial statement */}
+              <div>
+                <span className="section-label" style={{ color: accent }}>
+                  {hotelConfig.name}
+                </span>
+                <p style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+                  fontWeight: 300,
+                  lineHeight: 1.15,
+                  color: '#0c0c0c',
+                  margin: 0,
+                }}>
+                  {hotelConfig.description?.split('.')[0] || 'A curated collection of spaces designed for those who seek more than accommodation.'}
+                  <em style={{ fontStyle: 'italic', color: 'rgba(0,0,0,0.4)' }}>.</em>
+                </p>
+              </div>
+
+              {/* Right — two details + CTA */}
+              <div style={{ paddingBottom: 4 }}>
+                <p style={{
+                  fontSize: 13, lineHeight: 1.9,
+                  color: 'rgba(0,0,0,0.45)',
+                  marginBottom: 40,
+                  maxWidth: 380,
+                }}>
+                  {hotelConfig.description || 'Every space is a sanctuary. Every moment is considered. Discover what it means to stay somewhere that remembers you.'}
+                </p>
+                <Link to="/rooms" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 16,
+                  fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase',
+                  color: '#0c0c0c',
+                  transition: 'gap 0.3s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.gap = '24px'}
+                  onMouseLeave={e => e.currentTarget.style.gap = '16px'}
+                >
+                  View Rooms
+                  <span style={{ display: 'inline-block', width: 28, height: 1, background: '#0c0c0c' }} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── ROOMS — dark, horizontal scroll ────────────────────────────── */}
+        <section style={{ background: 'var(--dark)', paddingTop: 'clamp(4rem,8vw,7rem)' }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+            padding: '0 clamp(1.5rem,6vw,5rem)',
+            marginBottom: 'clamp(2rem,4vw,3rem)',
+          }}>
             <div>
-              <span style={{ color: '#c9a96e', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500, display: 'block', marginBottom: 12 }}>
-                Accommodation
-              </span>
-              <h2
-                className="font-display text-white"
-                style={{ fontSize: 'clamp(1.75rem, 3.5vw, 3.2rem)', fontWeight: 400 }}
-              >
+              <span className="section-label">Accommodation</span>
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(1.8rem,3.5vw,3rem)',
+                fontWeight: 300,
+                color: '#fff',
+                margin: 0, lineHeight: 1,
+              }}>
                 Rooms &amp; Suites
               </h2>
             </div>
-            <Link
-              to="/rooms"
-              className="hidden md:inline-flex items-center gap-3 group"
-              style={{ fontSize: 10, letterSpacing: '0.25em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}
-            >
-              <span className="group-hover:text-[#c9a96e] transition-colors">View All</span>
-              <span
-                className="transition-all duration-300 group-hover:w-8"
-                style={{ display: 'inline-block', width: 14, height: 1, background: 'rgba(255,255,255,0.3)' }}
-              />
-            </Link>
+
+            {/* Scroll arrows — desktop */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[['‹', -1], ['›', 1]].map(([arrow, dir]) => (
+                <button
+                  key={dir}
+                  onClick={() => scrollRooms(dir)}
+                  style={{
+                    width: 44, height: 44,
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: 'none', color: 'rgba(255,255,255,0.4)',
+                    fontSize: 20, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'border-color 0.2s, color 0.2s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
+                >
+                  {arrow}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Room cards — 1 col mobile, 3 col desktop, 2px gap for editorial feel */}
-          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 2 }}>
-            {loading
-              ? [0, 1, 2].map(i => (
-                <div key={i} style={{ aspectRatio: '3/4', background: '#1a1a1a' }} className="animate-pulse" />
+          {/* Scrollable strip — bleeds to edges */}
+          <div
+            ref={scrollRef}
+            className="rooms-scroll"
+            style={{ padding: '0 clamp(1.5rem,6vw,5rem) clamp(4rem,8vw,7rem)' }}
+          >
+            {!roomsReady
+              ? [0,1,2,3].map(i => (
+                <div key={i} className="room-card" style={{ background: '#1a1a1a' }} />
               ))
-              : displayRooms.map((room, i) => (
-                <RoomCardDark
-                  key={room.id}
-                  room={room}
-                  index={i}
-                  img={room.images?.[0] || ROOM_IMGS[i]}
-                  fmt={fmt}
-                  onClick={() => handleRoomClick(room)}
-                />
-              ))
+              : rooms.map((room, i) => {
+                const img = (() => {
+                  const m = (room.media || []).find(x => x.type === 'image');
+                  return m?.url || FALLBACK_ROOMS[i % FALLBACK_ROOMS.length];
+                })();
+                return (
+                  <article
+                    key={room.id}
+                    className="room-card"
+                    onClick={() => navigate(`/rooms/${room.id}`)}
+                  >
+                    <img src={img} alt={room.name} loading="lazy" />
+                    <div className="room-card-overlay" />
+                    <div className="room-card-body">
+                      <h3 className="room-card-name">{room.name}</h3>
+                      {room.base_rate && (
+                        <p className="room-card-rate">
+                          From {fmt(room.base_rate)} / night
+                        </p>
+                      )}
+                    </div>
+                    <div className="room-card-cta">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 10L10 2M10 2H4M10 2V8" stroke={accent} strokeWidth="1.2"/>
+                      </svg>
+                    </div>
+                  </article>
+                );
+              })
             }
-          </div>
 
-          {/* Mobile view all link */}
-          <div className="flex justify-center mt-6 md:hidden">
+            {/* "View all" end card */}
             <Link
               to="/rooms"
+              className="room-card"
               style={{
-                fontSize: 10, letterSpacing: '0.25em', textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.5)', display: 'inline-flex', alignItems: 'center', gap: 10,
+                background: '#111',
+                border: `1px solid rgba(255,255,255,0.06)`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 16,
+                textDecoration: 'none',
+                transition: 'border-color 0.3s',
               }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = accent}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
             >
-              View All Rooms
-              <span style={{ display: 'inline-block', width: 20, height: 1, background: 'rgba(255,255,255,0.3)' }} />
+              <span style={{ display: 'block', width: 36, height: 1, background: accent }} />
+              <span style={{
+                fontSize: 10, letterSpacing: '0.35em',
+                textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
+              }}>
+                All Rooms
+              </span>
             </Link>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Split — photo + experiences ─────────────────────────────────── */}
-      <section className="grid grid-cols-1 lg:grid-cols-2" style={{ minHeight: 560 }}>
+        {/* ── STORY — light, asymmetric ────────────────────────────────────── */}
+        <section style={{
+          background: 'var(--light)',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          minHeight: 600,
+        }} className="story-section">
+          <style>{`.story-section { } @media(max-width:768px){ .story-section { grid-template-columns: 1fr !important; } }`}</style>
 
-        <div className="relative overflow-hidden" style={{ minHeight: 340 }}>
-          <img
-            src={SPLIT_IMG}
-            alt="Hotel experience"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.15)' }} />
+          {/* Photo panel */}
           <div
-            className="absolute hidden sm:block"
-            style={{ bottom: 32, left: 32, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', padding: '18px 22px', maxWidth: 260 }}
+            className="story-panel"
+            style={{ position: 'relative', overflow: 'hidden', minHeight: 400 }}
           >
-            <p className="font-display text-white" style={{ fontSize: 16, lineHeight: 1.35, marginBottom: 6 }}>
-              "An oasis of calm above the city"
+            <img
+              className="story-img"
+              src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200&q=85&auto=format&fit=crop"
+              alt="The experience"
+            />
+            {/* Accent line overlay — bottom left */}
+            <div style={{
+              position: 'absolute', bottom: 40, left: 40,
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}>
+              <span style={{
+                display: 'block', width: 1, height: 48,
+                background: accent,
+              }} />
+            </div>
+          </div>
+
+          {/* Copy panel */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: 'clamp(3rem,7vw,6rem) clamp(2.5rem,6vw,5rem)',
+          }}>
+            <span className="section-label" style={{ color: accent }}>The Experience</span>
+            <h2 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(2rem,3.5vw,3rem)',
+              fontWeight: 300,
+              color: '#0c0c0c',
+              lineHeight: 1.1,
+              margin: '0 0 clamp(1.5rem,3vw,2.5rem)',
+            }}>
+              Every detail,<br />
+              <em style={{ color: 'rgba(0,0,0,0.35)' }}>considered.</em>
+            </h2>
+            <p style={{
+              fontSize: 13, lineHeight: 1.9,
+              color: 'rgba(0,0,0,0.45)',
+              maxWidth: 380,
+              margin: '0 0 clamp(2rem,4vw,3rem)',
+            }}>
+              From the thread count of the linen to the temperature of the pool — we obsess over every detail so that you never have to think about anything except enjoying yourself.
             </p>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, letterSpacing: '0.15em' }}>
-              — The Independent Travel Review
-            </p>
-          </div>
-        </div>
 
-        <div
-          className="flex flex-col justify-center"
-          style={{ background: '#f5f3ef', padding: 'clamp(2.5rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem)' }}
-        >
-          <span style={{ color: '#c9a96e', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500, display: 'block', marginBottom: 16 }}>
-            The Experience
-          </span>
-          <h2
-            className="font-display"
-            style={{ fontSize: 'clamp(1.6rem, 2.8vw, 2.5rem)', fontWeight: 400, lineHeight: 1.1, color: '#1a1a1a', marginBottom: 32 }}
-          >
-            Every detail,<br /><em>considered.</em>
-          </h2>
-          <div>
-            {EXPERIENCES.map(({ num, title, desc }) => (
-              <ExperienceRow key={num} num={num} title={title} desc={desc} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section
-        className="relative flex items-center overflow-hidden"
-        style={{ minHeight: 'clamp(400px, 55vh, 600px)' }}
-      >
-        <img src={CTA_IMG} alt="Book your stay" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(to right, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.5) 55%, rgba(0,0,0,0.1) 100%)'
-        }} />
-
-        <div
-          className="relative w-full"
-          style={{ padding: 'clamp(3rem, 6vw, 5rem) clamp(1.25rem, 5vw, 4rem)', maxWidth: 1280, margin: '0 auto' }}
-        >
-          <span style={{ color: '#c9a96e', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500, display: 'block', marginBottom: 16 }}>
-            Ready to Stay?
-          </span>
-          <h2
-            className="font-display text-white"
-            style={{ fontSize: 'clamp(2rem, 5.5vw, 5rem)', fontWeight: 400, lineHeight: 1, maxWidth: '13ch', marginBottom: 14 }}
-          >
-            Reserve Your Stay Today
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, lineHeight: 1.65, maxWidth: 340, marginBottom: 32 }}>
-            Best rates guaranteed when you book directly with us.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to="/book"
-              style={{
-                display: 'inline-flex', alignItems: 'center',
-                background: '#c9a96e', color: '#fff',
-                fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase',
-                padding: '15px 32px', transition: 'background 0.2s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = '#b8965d'}
-              onMouseLeave={e => e.currentTarget.style.background = '#c9a96e'}
-            >
-              Book Direct
-            </Link>
-            <a
-              href={`tel:${hotelConfig.contact.phone}`}
-              style={{
-                display: 'inline-flex', alignItems: 'center',
-                border: '1px solid rgba(255,255,255,0.35)', color: '#fff',
-                fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase',
-                padding: '15px 32px', transition: 'border-color 0.2s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'}
-            >
-              {hotelConfig.contact.phone}
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Contact strip ────────────────────────────────────────────────── */}
-      <section style={{ background: '#1a1a1a', padding: 'clamp(2.5rem, 5vw, 3.5rem) clamp(1.25rem, 5vw, 4rem)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '2.5rem', marginBottom: '2rem' }}
-          >
+            {/* Three quiet pillars */}
             {[
-              { label: 'Address',              value: hotelConfig.contact.address },
-              { label: 'Phone',                value: hotelConfig.contact.phone, href: `tel:${hotelConfig.contact.phone}` },
-              { label: 'Email',                value: hotelConfig.contact.email, href: `mailto:${hotelConfig.contact.email}` },
-              { label: 'Check-in · Check-out', value: `${hotelConfig.contact.checkIn} · ${hotelConfig.contact.checkOut}` },
-            ].map(({ label, value, href }) => (
-              <div key={label}>
-                <p style={{ fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a96e', marginBottom: 8 }}>{label}</p>
-                {href
-                  ? <a href={href} style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 1.6, display: 'block', transition: 'color 0.2s' }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
-                  >{value}</a>
-                  : <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 1.6 }}>{value}</p>
-                }
+              ['Dining',    'West African cuisine, contemporary kitchen'],
+              ['Wellness',  'Spa, pool, restorative treatments'],
+              ['Concierge', 'Private transfers, curated city experiences'],
+            ].map(([title, sub], i) => (
+              <div key={title} style={{
+                display: 'flex', gap: 20, alignItems: 'flex-start',
+                padding: '16px 0',
+                borderTop: i === 0 ? '1px solid rgba(0,0,0,0.08)' : 'none',
+                borderBottom: '1px solid rgba(0,0,0,0.08)',
+              }}>
+                <span style={{
+                  fontFamily: 'ui-monospace, monospace',
+                  fontSize: 9, letterSpacing: '0.2em',
+                  color: accent, paddingTop: 2, flexShrink: 0,
+                }}>
+                  0{i + 1}
+                </span>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 500, color: '#0c0c0c', margin: '0 0 2px' }}>{title}</p>
+                  <p style={{ fontSize: 11, color: 'rgba(0,0,0,0.35)', margin: 0 }}>{sub}</p>
+                </div>
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <p className="font-display" style={{ color: 'rgba(255,255,255,0.15)', fontSize: 13 }}>{hotelConfig.name}</p>
-            <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10, letterSpacing: '0.2em' }}>
-              © {new Date().getFullYear()}
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <style>{`
-        @keyframes heroScroll {
-          0%   { transform: translateY(-100%); opacity: 0; }
-          30%  { opacity: 1; }
-          70%  { opacity: 1; }
-          100% { transform: translateY(200%); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-/* ── Dark room card ──────────────────────────────────────────────────────── */
-function RoomCardDark({ room, index, img, fmt, onClick }) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <article
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', cursor: 'pointer', display: 'block' }}
-    >
-      <img
-        src={img}
-        alt={room.name}
-        style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-          transform: hovered ? 'scale(1.06)' : 'scale(1)',
-          transition: 'transform 0.7s cubic-bezier(0.16,1,0.3,1)',
-        }}
-      />
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)',
-      }} />
-
-      {(room.room_type || room.category) && (
-        <div style={{ position: 'absolute', top: 20, left: 20 }}>
-          <span style={{
-            fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase',
-            color: '#c9a96e', border: '1px solid rgba(201,169,110,0.4)',
-            padding: '4px 10px', display: 'inline-block',
-          }}>
-            {room.room_type || room.category}
-          </span>
-        </div>
-      )}
-
-      <div style={{ position: 'absolute', top: 18, right: 20 }}>
-        <span className="font-display" style={{ fontSize: 32, fontWeight: 300, color: 'rgba(255,255,255,0.1)' }}>
-          0{index + 1}
-        </span>
-      </div>
-
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 22 }}>
-        <h3 className="font-display text-white" style={{ fontSize: 20, fontWeight: 300, lineHeight: 1.2, marginBottom: 8 }}>
-          {room.name}
-        </h3>
-        <div style={{
-          maxHeight: hovered ? 72 : 0, opacity: hovered ? 1 : 0,
-          overflow: 'hidden', transition: 'max-height 0.35s ease, opacity 0.3s ease',
-          marginBottom: hovered ? 10 : 0,
+        {/* ── RESERVE CTA — full bleed, accent color ──────────────────────── */}
+        <section style={{
+          background: accent,
+          padding: 'clamp(5rem,10vw,8rem) clamp(1.5rem,6vw,5rem)',
         }}>
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 1.65 }}>{room.description}</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          {room.base_rate && (
-            <div>
-              <span style={{ color: '#c9a96e', fontSize: 16, fontWeight: 300 }}>{fmt(room.base_rate)}</span>
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginLeft: 4 }}>/night</span>
-            </div>
-          )}
-          <span style={{
-            fontSize: 9, letterSpacing: '0.25em', textTransform: 'uppercase',
-            color: hovered ? '#c9a96e' : 'rgba(255,255,255,0.35)',
-            display: 'flex', alignItems: 'center', gap: 6,
-            transition: 'color 0.3s',
+          <div style={{
+            maxWidth: 1300, margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '3rem',
           }}>
-            View
-            <span style={{
-              display: 'inline-block', height: 1,
-              background: hovered ? '#c9a96e' : 'rgba(255,255,255,0.25)',
-              width: hovered ? 22 : 12, transition: 'width 0.3s, background 0.3s',
-            }} />
-          </span>
-        </div>
-      </div>
-    </article>
-  );
-}
+            <div>
+              <p style={{
+                fontSize: 9, letterSpacing: '0.45em',
+                textTransform: 'uppercase',
+                color: 'rgba(0,0,0,0.4)',
+                margin: '0 0 16px',
+              }}>
+                Direct booking · Best rate guaranteed
+              </p>
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(2.5rem,5vw,4.5rem)',
+                fontWeight: 300,
+                color: '#0c0c0c',
+                lineHeight: 0.95,
+                margin: 0,
+              }}>
+                Begin your<br /><em>stay.</em>
+              </h2>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-end' }}>
+              <Link to="/book" style={{
+                display: 'inline-flex', alignItems: 'center',
+                background: '#0c0c0c', color: '#fff',
+                fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase',
+                padding: '16px 44px',
+                transition: 'opacity 0.2s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                Reserve Now
+              </Link>
+              {hotelConfig.contact?.phone && (
+                <a href={`tel:${hotelConfig.contact.phone}`} style={{
+                  fontSize: 11, letterSpacing: '0.1em',
+                  color: 'rgba(0,0,0,0.45)',
+                  transition: 'color 0.2s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#0c0c0c'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,0,0,0.45)'}
+                >
+                  {hotelConfig.contact.phone}
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
 
-/* ── Experience accordion row ────────────────────────────────────────────── */
-function ExperienceRow({ num, title, desc }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ borderBottom: '1px solid #e8e4dc', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 10, letterSpacing: '0.2em', color: '#c9a96e', flexShrink: 0 }}>{num}</span>
-          <span className="font-display" style={{ fontSize: 18, fontWeight: 300, color: open ? '#c9a96e' : '#1a1a1a', transition: 'color 0.2s' }}>
-            {title}
-          </span>
-        </div>
-        <span style={{ fontSize: 18, color: 'rgba(26,26,26,0.25)', transform: open ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', lineHeight: 1, flexShrink: 0 }}>+</span>
+
+
       </div>
-      <div style={{
-        overflow: 'hidden', maxHeight: open ? 80 : 0, opacity: open ? 1 : 0,
-        transition: 'max-height 0.3s ease, opacity 0.25s ease',
-        paddingBottom: open ? 14 : 0, paddingLeft: 34,
-      }}>
-        <p style={{ fontSize: 13, color: '#6b6b6b', lineHeight: 1.7 }}>{desc}</p>
-      </div>
-    </div>
+    </>
   );
 }

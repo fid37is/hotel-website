@@ -1,4 +1,4 @@
-// src/pages/AccountPage.jsx
+// hotel-website/src/pages/AccountPage.jsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate }   from 'react-router-dom';
 import { useGuestAuth }        from '../hooks/useGuestAuth.jsx';

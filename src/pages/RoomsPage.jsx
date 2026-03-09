@@ -1,27 +1,18 @@
 // src/pages/RoomsPage.jsx
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useBooking }    from '../hooks/useBooking.jsx';
 import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
 import { roomsApi }      from '../services/api.js';
+import { fmt }           from '../utils/currency.js';
 import AvailabilitySearch from '../components/booking/AvailabilitySearch.jsx';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(n);
-
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80&auto=format&fit=crop';
-// API returns room.media (array of {url, type}), not room.images
-const getRoomImage = (room) => {
-  const media = room.media || [];
-  const img = media.find(m => m.type === 'image' || m.type === 'gif');
-  return img?.url || PLACEHOLDER_IMG;
-};
 
-// API returns room.number not room.room_number
-const getRoomName = (room) => {
-  if (room.name) return room.name;
-  if (room.number) return `Room ${room.number}`;
-  return room.room_types?.name || 'Room';
+// Room TYPE card image — reads from type.media (uploaded in HMS → Room Types)
+const getTypeImage = (type) => {
+  const cover = (type.media || []).find(m => m.type === 'image' || m.type === 'gif');
+  return cover?.url || PLACEHOLDER_IMG;
 };
 
 
@@ -29,81 +20,45 @@ export default function RoomsPage() {
   const hotelConfig = useHotelConfig();
   const { state, dispatch } = useBooking();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // allRooms — individual room records, each with a room_types nested object
-  const [allRooms, setAllRooms] = useState([]);
+  // allTypes — room type categories, each with their own marketing media
+  const [allTypes, setAllTypes] = useState([]);
   const [loading,  setLoading]  = useState(true);
-
-  const activeTab = searchParams.get('type') || 'All';
 
   const hasSearch   = !!(state.search.checkIn && state.search.checkOut);
   const isSearching = hasSearch ? state.availabilityLoading : loading;
 
   useEffect(() => {
     document.title = `Rooms & Suites | ${hotelConfig.shortName}`;
-    roomsApi.getAllRooms()
-      .then(res => setAllRooms(res.data || []))
+    roomsApi.getTypes()
+      .then(res => setAllTypes(res.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  // Tabs built from unique room type names across all rooms
-  const tabs = useMemo(() => {
-    const names = [...new Set(allRooms.map(r => r.room_types?.name || r.room_type?.name).filter(Boolean))];
-    return ['All', ...names];
-  }, [allRooms]);
-
-  // Rooms for active tab
-  const tabRooms = useMemo(() => {
-    if (activeTab === 'All') return allRooms;
-    return allRooms.filter(r => (r.room_types?.name || r.room_type?.name) === activeTab);
-  }, [allRooms, activeTab]);
-
-  // Available room IDs when a search has been run
-  const availableIds = useMemo(() => {
+  // Available type IDs — a type is available if at least one of its rooms is available
+  const availableTypeIds = useMemo(() => {
     if (!hasSearch) return null;
-    return new Set((state.availableRooms || []).map(r => r.id).filter(Boolean));
+    return new Set((state.availableRooms || []).map(r => r.type_id || r.room_type_id).filter(Boolean));
   }, [hasSearch, state.availableRooms]);
 
-  // Annotate rooms with availability
-  const displayRooms = useMemo(() => {
-    if (!hasSearch || !availableIds) return tabRooms;
-    return tabRooms.map(r => ({ ...r, available: availableIds.has(r.id) }));
-  }, [tabRooms, hasSearch, availableIds]);
+  // Annotate types with availability flag
+  const displayTypes = useMemo(() => {
+    if (!hasSearch || !availableTypeIds) return allTypes;
+    return allTypes.map(t => ({ ...t, available: availableTypeIds.has(t.id) }));
+  }, [allTypes, hasSearch, availableTypeIds]);
 
   const availableCount = hasSearch
-    ? displayRooms.filter(r => r.available).length
-    : displayRooms.length;
+    ? displayTypes.filter(t => t.available).length
+    : displayTypes.length;
 
-  // Suggest other types when entire active tab is unavailable
-  const suggestedTabs = useMemo(() => {
-    if (!hasSearch || !availableIds || activeTab === 'All') return [];
-    if (displayRooms.some(r => r.available)) return [];
-    return tabs.filter(tab => {
-      if (tab === 'All' || tab === activeTab) return false;
-      return allRooms
-        .filter(r => (r.room_types?.name || r.room_type?.name) === tab)
-        .some(r => availableIds.has(r.id));
-    });
-  }, [displayRooms, hasSearch, availableIds, tabs, allRooms, activeTab]);
 
-  const handleTabClick = (tab) => {
-    if (tab === 'All') {
-      searchParams.delete('type');
-      setSearchParams(searchParams, { replace: true });
-    } else {
-      setSearchParams({ type: tab }, { replace: true });
-    }
-  };
 
-  const handleBook = (room) => {
-    // Pre-fill search with room type but don't skip step 0 — guest still needs to pick dates
+  const handleBook = (type) => {
     dispatch({ type: 'SET_SEARCH', payload: {
-      checkIn:      state.search.checkIn  || '',
-      checkOut:     state.search.checkOut || '',
-      guests:       state.search.guests   || 1,
-      preselectedTypeId: room.type_id || room.room_type_id || room.id,
+      checkIn:           state.search.checkIn  || '',
+      checkOut:          state.search.checkOut || '',
+      guests:            state.search.guests   || 1,
+      preselectedTypeId: type.id,
     }});
     navigate('/book');
   };
@@ -142,47 +97,7 @@ export default function RoomsPage() {
         </div>
       </div>
 
-      {/* ── Type tabs ─────────────────────────────────────────────────── */}
-      {!loading && tabs.length > 1 && (
-        <div style={{
-          background: '#f5f3ef', borderBottom: '1px solid #e8e4dc',
-          position: 'sticky', top: 'calc(var(--nav-h, 72px) + 68px)', zIndex: 30,
-          overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
-        }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 clamp(1.25rem, 5vw, 4rem)', display: 'flex', minWidth: 'max-content' }}>
-            {tabs.map(tab => {
-              const isActive = tab === activeTab;
-              const badge = hasSearch && availableIds
-                ? (tab === 'All'
-                  ? allRooms.filter(r => availableIds.has(r.id)).length
-                  : allRooms.filter(r => (r.room_types?.name || r.room_type?.name) === tab && availableIds.has(r.id)).length)
-                : null;
 
-              return (
-                <button key={tab} onClick={() => handleTabClick(tab)} style={{
-                  padding: '1rem 1.25rem', fontSize: 11, letterSpacing: '0.12em',
-                  textTransform: 'uppercase', fontWeight: isActive ? 600 : 400,
-                  color: isActive ? '#1a1a1a' : '#9a8c7a',
-                  borderBottom: isActive ? '2px solid #1a1a1a' : '2px solid transparent',
-                  borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-                  background: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-                  display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit',
-                  transition: 'color 0.2s',
-                }}>
-                  {tab}
-                  {badge !== null && (
-                    <span style={{
-                      fontSize: 9, borderRadius: 999, padding: '1px 6px', fontWeight: 600,
-                      background: badge > 0 ? '#c9a96e' : 'rgba(0,0,0,0.1)',
-                      color: badge > 0 ? '#fff' : '#9a8c7a',
-                    }}>{badge}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ── Results ───────────────────────────────────────────────────── */}
       <section style={{ padding: 'clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 5vw, 4rem)' }}>
@@ -195,53 +110,32 @@ export default function RoomsPage() {
                 <p style={{ color: '#dc2626', fontSize: 14 }}>{state.availabilityError}</p>
               ) : (
                 <p style={{ fontSize: 13, color: '#6b6b6b' }}>
-                  <strong style={{ color: '#1a1a1a' }}>{availableCount} room{availableCount !== 1 ? 's' : ''}</strong> available
+                  <strong style={{ color: '#1a1a1a' }}>{availableCount} room type{availableCount !== 1 ? 's' : ''}</strong> available
                   {' '}for <strong style={{ color: '#1a1a1a' }}>{state.search.checkIn}</strong>
                   {' — '}<strong style={{ color: '#1a1a1a' }}>{state.search.checkOut}</strong>
                   {' · '}{state.search.guests} guest{state.search.guests > 1 ? 's' : ''}
-                  {activeTab !== 'All' && <span style={{ color: 'var(--clr-secondary, #c9a96e)' }}> · {activeTab}</span>}
                 </p>
               )}
             </div>
           )}
 
-          {/* Unavailable tab — suggestions */}
-          {suggestedTabs.length > 0 && (
-            <div style={{ background: '#1a1a1a', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderLeft: '3px solid #c9a96e' }}>
-              <p style={{ fontSize: 13, color: '#fff', marginBottom: 8 }}>
-                No <strong>{activeTab}</strong> rooms available for your selected dates.
-              </p>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>Available alternatives:</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {suggestedTabs.map(t => (
-                  <button key={t} onClick={() => handleTabClick(t)} style={{
-                    fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase',
-                    border: '1px solid #c9a96e', color: 'var(--clr-secondary, #c9a96e)',
-                    padding: '7px 16px', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  }}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Grid */}
           {isSearching ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 2 }}>
               {[1,2,3].map(i => <div key={i} className="animate-pulse" style={{ aspectRatio: '3/4', background: '#e8e4dc' }} />)}
             </div>
-          ) : displayRooms.length > 0 ? (
+          ) : displayTypes.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 2 }}>
-              {displayRooms.map((room, i) => (
+              {displayTypes.map((type, i) => (
                 <RoomCard
-                  key={room.id}
-                  room={room}
+                  key={type.id}
+                  room={type}
                   index={i}
                   hasSearch={hasSearch}
-                  onBook={() => handleBook(room)}
-                  onViewDetails={() => navigate(`/rooms/${room.type_id || room.room_type_id || room.id}`)}
-                  fmt={fmt}
+                  onBook={() => handleBook(type)}
+                  onViewDetails={() => navigate(`/rooms/${type.id}`)}
                 />
               ))}
             </div>
@@ -274,11 +168,11 @@ export default function RoomsPage() {
 }
 
 /* ── Individual room card ─────────────────────────────────────────────────── */
-function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
+function RoomCard({ room, index, hasSearch, onBook, onViewDetails }) {
   const [hovered, setHovered] = useState(false);
-  const typeName = room.room_types?.name || room.room_type?.name || '';
-  const img      = getRoomImage(room);
-  const baseRate = room.rate_plans?.[0]?.base_rate || room.rate_plans?.[0]?.rate || room.room_types?.base_rate || room.base_rate;
+  // room is a room TYPE here — use type's own marketing cover and base_rate
+  const img      = getTypeImage(room);
+  const baseRate = room.base_rate;
   const isAvail  = !hasSearch || room.available !== false;
 
   return (
@@ -287,7 +181,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
       onMouseLeave={() => setHovered(false)}
       style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', cursor: 'pointer', opacity: isAvail ? 1 : 0.5 }}
     >
-      <img src={img} alt={getRoomName(room)}
+      <img src={img} alt={room.name || 'Room'}
         style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
           transform: hovered && isAvail ? 'scale(1.05)' : 'scale(1)',
@@ -307,14 +201,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
         </div>
       )}
 
-      {/* Room type badge */}
-      {typeName && (
-        <div style={{ position: 'absolute', top: 18, left: 18, zIndex: 6 }}>
-          <span style={{ fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'var(--clr-secondary, #c9a96e)', border: '1px solid rgba(201,169,110,0.4)', padding: '4px 10px' }}>
-            {typeName}
-          </span>
-        </div>
-      )}
+
 
       {/* Index */}
       <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 6 }}>
@@ -324,7 +211,7 @@ function RoomCard({ room, index, hasSearch, onBook, onViewDetails, fmt }) {
       {/* Info */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, zIndex: 6 }}>
         <h3 className="font-display text-white" style={{ fontSize: 20, fontWeight: 300, lineHeight: 1.2, marginBottom: 4 }}>
-          {getRoomName(room)}
+          {room.name || "Room"}
         </h3>
         {room.floor && (
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginBottom: 6 }}>Floor {room.floor}</p>

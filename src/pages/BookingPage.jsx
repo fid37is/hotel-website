@@ -48,8 +48,9 @@ export default function BookingPage() {
     };
   });
   const [formErrors,  setFormErrors]  = useState({});
-  const [submitting,  setSubmitting]  = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [submitting,    setSubmitting]    = useState(false);
+  const [submitError,   setSubmitError]   = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('on_arrival'); // 'on_arrival' | 'bank_transfer' | 'paystack'
 
   const today    = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -68,6 +69,19 @@ export default function BookingPage() {
   useEffect(() => { document.title = `Book a Room | ${hotelConfig.shortName}`; }, [hotelConfig.shortName]);
 
   const selectedType = availableTypes.find(t => t.id === selectedTypeId) || selectedRoom;
+
+  // Payment methods available for this hotel (from live config)
+  const availablePaymentMethods = [
+    hotelConfig.payment?.payOnArrival      !== false && { id: 'on_arrival',    label: 'Pay on Arrival',       sub: 'Pay at the front desk when you check in. No charge now.' },
+    hotelConfig.payment?.bankTransfer                && { id: 'bank_transfer',  label: 'Bank Transfer',        sub: 'Transfer payment to our bank account before your arrival.' },
+    hotelConfig.payment?.paystackEnabled             && { id: 'paystack',       label: 'Pay Now by Card',      sub: 'Secure online payment via Paystack. Charged immediately.' },
+  ].filter(Boolean);
+
+  // If rate requires prepayment, exclude pay-on-arrival
+  const prepaymentRequired = selectedRate?.prepayment_required ?? false;
+  const paymentOptions = prepaymentRequired
+    ? availablePaymentMethods.filter(m => m.id !== 'on_arrival')
+    : availablePaymentMethods;
   const ratePerNight = selectedRate?.base_rate ?? selectedRate?.rate ?? selectedType?.base_rate ?? 0;
   const totalAmount  = ratePerNight * numNights;
 
@@ -144,9 +158,10 @@ export default function BookingPage() {
         rate_plan_id: selectedRate?.id, adults: guestCount,
         guest: { first_name: form.firstName, last_name: form.lastName, email: form.email, phone: form.phone },
         special_requests: form.specialRequests,
+        payment_method: paymentMethod,
       };
       const res = await reservationsApi.create(payload);
-      dispatch({ type: 'BOOKING_CONFIRMED', payload: { reservation: res.data?.reservation || res.data, guestToken: res.data?.guest_token } });
+      dispatch({ type: 'BOOKING_CONFIRMED', payload: { reservation: res.data?.reservation || res.data, guestToken: res.data?.guest_token, paymentMethod } });
       navigate('/confirmation');
     } catch (err) {
       setSubmitError(err.message || 'Booking failed. Please try again.');
@@ -380,6 +395,72 @@ export default function BookingPage() {
                     ))}
                   </div>
                   {submitError && <div className="alert alert--error mt-4">{submitError}</div>}
+
+                  {/* Payment Method */}
+                  <div className="mt-5 rounded-lg border border-border bg-surface p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
+                      Payment Method
+                    </p>
+                    {paymentOptions.length === 0 ? (
+                      <p className="text-xs text-muted">
+                        Contact the hotel directly to arrange payment.
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {paymentOptions.map(opt => (
+                          <label key={opt.id}
+                            className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
+                              ${paymentMethod === opt.id ? 'border-secondary bg-secondary/5' : 'border-border hover:border-secondary/40'}`}>
+                            <input type="radio" name="payment" className="mt-0.5 accent-secondary"
+                              checked={paymentMethod === opt.id}
+                              onChange={() => setPaymentMethod(opt.id)} />
+                            <div>
+                              <p className="text-sm font-medium">{opt.label}</p>
+                              <p className="text-xs text-muted mt-0.5">{opt.sub}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Bank details shown inline when bank transfer selected */}
+                    {paymentMethod === 'bank_transfer' && hotelConfig.payment?.bankName && (
+                      <div className="mt-3 p-3 rounded-lg bg-bg border border-border">
+                        <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-2">Transfer To</p>
+                        <div className="flex flex-col gap-1.5 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted">Bank</span>
+                            <strong>{hotelConfig.payment.bankName}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Account Number</span>
+                            <strong className="font-mono tracking-wider">{hotelConfig.payment.bankAccountNumber}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Account Name</span>
+                            <strong>{hotelConfig.payment.bankAccountName}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Amount</span>
+                            <strong className="text-secondary">{fmt(totalAmount)}</strong>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted mt-3 leading-relaxed">
+                          Use your name as the transfer reference. Your booking will be confirmed — 
+                          please send proof of payment to{' '}
+                          <a href={`mailto:${hotelConfig.contact?.email}`} className="text-secondary hover:underline">
+                            {hotelConfig.contact?.email}
+                          </a>.
+                        </p>
+                      </div>
+                    )}
+
+                    {prepaymentRequired && paymentOptions.length > 0 && (
+                      <p className="text-xs text-muted mt-3 leading-relaxed">
+                        ⚠ This rate plan requires payment before or at the time of booking.
+                      </p>
+                    )}
+                  </div>
 
                   {/* Cancellation Policy */}
                   <div className="mt-5 rounded-lg border border-border bg-surface p-4">

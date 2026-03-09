@@ -7,16 +7,23 @@ import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
 import { fmt }           from '../utils/currency.js';
 import RoomGallery       from '../components/ui/RoomGallery.jsx';
 
-// getRoomTypeById returns room.photos as [{url, room_number, room_id, floor}]
-// getRoomById returns room.media as [{url, type, path, ...}]
-// Handle both shapes so this works regardless of which endpoint was called
-const getMediaImages = (room) => {
+// Type-level marketing images — from type.photos (set by admin in HMS Room Types)
+const getTypeImages = (type) => {
+  if (!type) return [];
+  return (type.photos || []).map(p => p.url).filter(Boolean);
+};
+
+// Individual room images — from room.media
+const getRoomImages = (room) => {
   if (!room) return [];
-  // room_type endpoint: photos array with url objects
-  if (room.photos?.length) return room.photos.map(p => p.url).filter(Boolean);
-  // individual room endpoint: media array with type field
-  if (room.media?.length) return room.media.filter(m => m.type === 'image' || m.type === 'gif').map(m => m.url);
-  return [];
+  return (room.media || [])
+    .filter(m => m.type === 'image' || m.type === 'gif')
+    .map(m => m.url);
+};
+
+const getRoomVideo = (room) => {
+  if (!room) return null;
+  return (room.media || []).find(m => m.type === 'video')?.url || null;
 };
 
 export default function RoomDetailPage() {
@@ -25,10 +32,12 @@ export default function RoomDetailPage() {
   const { dispatch }  = useBooking();
   const hotelConfig   = useHotelConfig();   // live config, not static import
 
-  const [room,    setRoom]    = useState(null);
-  const [rates,   setRates]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [room,            setRoom]            = useState(null);
+  const [rates,           setRates]           = useState([]);
+  const [individualRooms, setIndividualRooms] = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState('');
+  const [activeRoomIdx,   setActiveRoomIdx]   = useState(0);
 
   const today    = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -42,11 +51,17 @@ export default function RoomDetailPage() {
     : 0;
 
   useEffect(() => {
-    Promise.all([roomsApi.getTypeById(id), roomsApi.getRates(id)])
+    Promise.all([
+      roomsApi.getTypeById(id),
+      roomsApi.getRates(id),
+    ])
       .then(([roomRes, ratesRes]) => {
-        setRoom(roomRes.data);
+        const typeData = roomRes.data;
+        setRoom(typeData);
         setRates(ratesRes.data || []);
-        document.title = `${roomRes.data?.name} | ${hotelConfig.shortName}`;
+        // Individual rooms come back inside the type response
+        setIndividualRooms(typeData?.rooms || []);
+        document.title = `${typeData?.name} | ${hotelConfig.shortName}`;
       })
       .catch(() => setError('Room not found.'))
       .finally(() => setLoading(false));
@@ -75,7 +90,7 @@ export default function RoomDetailPage() {
     </div>
   );
 
-  const images = getMediaImages(room);
+  const images = getTypeImages(room);
 
   return (
     <div className="pb-24">
@@ -92,10 +107,48 @@ export default function RoomDetailPage() {
         </div>
       </div>
 
-      {/* Gallery — passes extracted image URLs */}
+      {/* Hero gallery — room TYPE media (marketing images) */}
       <div className="container py-8">
         <RoomGallery images={images} videoUrl={room.video_url || null} roomName={room.name} />
       </div>
+
+      {/* Individual rooms section — each room's own photos */}
+      {individualRooms.length > 0 && individualRooms.some(r => r.media?.length > 0) && (
+        <div className="container pb-8">
+          <h2 className="font-display text-2xl font-medium mb-5">Our {room.name} Rooms</h2>
+          {/* Room selector tabs */}
+          <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+            {individualRooms.map((r, i) => (
+              <button key={r.id} onClick={() => setActiveRoomIdx(i)}
+                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all
+                  ${activeRoomIdx === i
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-border text-muted hover:border-secondary/50'}`}>
+                Room {r.number}
+                {r.floor ? <span className="text-xs opacity-60 ml-1">· Floor {r.floor}</span> : null}
+              </button>
+            ))}
+          </div>
+          {/* Active room gallery */}
+          {(() => {
+            const activeRoom = individualRooms[activeRoomIdx];
+            const roomImgs  = getRoomImages(activeRoom);
+            const roomVideo = getRoomVideo(activeRoom);
+            return (
+              <div>
+                <RoomGallery
+                  images={roomImgs}
+                  videoUrl={roomVideo}
+                  roomName={`Room ${activeRoom?.number}`}
+                />
+                {activeRoom?.notes && (
+                  <p className="text-xs text-muted mt-3 italic">{activeRoom.notes}</p>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Content */}
       <div className="container">
