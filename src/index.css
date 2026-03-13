@@ -1,135 +1,209 @@
-/* src/index.css — Single source of truth for all styling
+/* src/index.css
+ *
+ * All colors reference CSS custom properties from src/config/theme.js.
+ * applyTokens()     → writes defaultTokens to :root on boot
+ * applyBrandColors() → overrides brand/accent/nav/btn/footer tokens at runtime
+ *
+ * NEVER hardcode a color here. NEVER use @apply with a brand Tailwind token
+ * (bg-primary etc.) — Tailwind compiles those to static hex at build time.
+ * Always use var(--token-name).
  */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── CSS Custom Properties (driven by Tailwind theme / hotel.config) ────────*/
+/* ── Base ────────────────────────────────────────────────────────────────────*/
 @layer base {
-  :root {
-    /* Colours — mirror tailwind.config.js colors */
-    --clr-primary:    theme('colors.primary');
-    --clr-secondary:  theme('colors.secondary');
-    --clr-bg:         theme('colors.bg');
-    --clr-surface:    theme('colors.surface');
-    --clr-text:       theme('colors.primary');
-    --clr-muted:      theme('colors.muted');
-    --clr-border:     theme('colors.border');
-
-    /* Fonts */
-    --font-display:   theme('fontFamily.display');
-    --font-body:      theme('fontFamily.body');
-    --font-mono:      theme('fontFamily.mono');
-
-    /* Layout */
-    --nav-h:    72px;
-    --max-w:    1280px;
-    --radius:   4px;
-    --radius-lg:8px;
-
-    /* Easing */
-    --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
-  }
-
-  /* Reset */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   html { font-size: 16px; scroll-behavior: smooth; }
 
   body {
-    @apply font-body bg-bg text-primary antialiased;
-    line-height: 1.6;
+    font-family:              var(--font-body);
+    background-color:         var(--bg-page);
+    color:                    var(--text-base);
+    -webkit-font-smoothing:   antialiased;
+    line-height:              1.6;
   }
 
   img, video { display: block; max-width: 100%; }
-  a { color: inherit; text-decoration: none; }
-  button { cursor: pointer; border: none; background: none; font: inherit; }
+  a          { color: inherit; text-decoration: none; }
+  button     { cursor: pointer; border: none; background: none; font: inherit; }
 }
 
-/* ── Shared Components ───────────────────────────────────────────────────────*/
+/* ── Tailwind utility overrides ──────────────────────────────────────────────
+   Ensures every Tailwind brand class reads the live CSS var, not the
+   static hex compiled at build time.
+   ──────────────────────────────────────────────────────────────────────────*/
+@layer utilities {
+  /* Backgrounds */
+  .bg-primary   { background-color: var(--brand)      !important; }
+  .bg-secondary { background-color: var(--accent)     !important; }
+  .bg-bg        { background-color: var(--bg-page)    !important; }
+  .bg-surface   { background-color: var(--bg-surface) !important; }
+  .bg-muted     { background-color: var(--bg-muted)   !important; }
+  .bg-border    { background-color: var(--border-base)!important; }
+
+  /* Opacity variants */
+  .bg-primary\/10  { background-color: color-mix(in srgb, var(--brand)  10%, transparent) !important; }
+  .bg-primary\/20  { background-color: color-mix(in srgb, var(--brand)  20%, transparent) !important; }
+  .bg-secondary\/5 { background-color: color-mix(in srgb, var(--accent)  5%, transparent) !important; }
+  .bg-border\/50   { background-color: color-mix(in srgb, var(--border-base) 50%, transparent) !important; }
+
+  /* Text */
+  .text-primary   { color: var(--text-base)  !important; }
+  .text-secondary { color: var(--accent)     !important; }
+  .text-muted     { color: var(--text-muted) !important; }
+
+  /* Borders */
+  .border-primary        { border-color: var(--brand)      !important; }
+  .border-secondary      { border-color: var(--accent)     !important; }
+  .border-border         { border-color: var(--border-base)!important; }
+  .border-muted          { border-color: var(--text-muted) !important; }
+  .border-secondary\/20  { border-color: color-mix(in srgb, var(--accent) 20%, transparent) !important; }
+  .border-secondary\/40  { border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important; }
+  .border-border\/50     { border-color: color-mix(in srgb, var(--border-base) 50%, transparent) !important; }
+
+  /* Fonts */
+  .font-display { font-family: var(--font-display) !important; }
+  .font-body    { font-family: var(--font-body)    !important; }
+  .font-mono    { font-family: var(--font-mono)    !important; }
+}
+
+/* ── Components ──────────────────────────────────────────────────────────────*/
 @layer components {
 
-  /* ── Layout ── */
+  /* Layout */
   .container {
-    @apply mx-auto px-6 w-full;
+    @apply mx-auto w-full;
+    padding-left:  clamp(1rem, 5vw, 4rem);
+    padding-right: clamp(1rem, 5vw, 4rem);
     max-width: var(--max-w);
   }
 
-  /* ── Buttons ── */
+  .pt-nav { padding-top: calc(var(--nav-h, 72px) + 38px); }
+
+  /* ── Buttons ──────────────────────────────────────────────────────────────*/
   .btn {
-    @apply inline-flex items-center gap-2 px-5 py-3 text-sm font-body font-medium tracking-wide
-           transition-all duration-200 cursor-pointer select-none;
-    border-radius: var(--radius);
-    line-height: 1;
+    display:         inline-flex;
+    align-items:     center;
+    gap:             0.5rem;
+    padding:         0.75rem 1.25rem;
+    font-family:     var(--font-body);
+    font-size:       0.875rem;
+    font-weight:     500;
+    letter-spacing:  0.025em;
+    line-height:     1;
+    border-radius:   var(--radius);
+    transition:      opacity 0.2s, filter 0.2s, background-color 0.2s, color 0.2s;
+    cursor:          pointer;
+    user-select:     none;
+    white-space:     nowrap;
   }
+
+  /* Primary button — uses --btn-primary-bg/text (defaults to brand) */
   .btn--primary {
-    @apply bg-primary text-white;
+    background-color: var(--btn-primary-bg);
+    color:            var(--btn-primary-text);
+    border:           none;
   }
-  .btn--primary:hover { background: #333; }
+  .btn--primary:hover   { opacity: 0.85; }
+  .btn--primary:disabled{ opacity: 0.45; cursor: not-allowed; }
 
+  /* Accent/CTA button — uses --btn-accent-bg/text (defaults to accent) */
   .btn--gold {
-    @apply bg-secondary text-white;
+    background-color: var(--btn-accent-bg);
+    color:            var(--btn-accent-text);
+    border:           none;
   }
-  .btn--gold:hover { filter: brightness(1.08); }
+  .btn--gold:hover   { filter: brightness(1.08); }
+  .btn--gold:disabled{ opacity: 0.45; cursor: not-allowed; }
 
+  /* Outline — brand border, transparent bg */
   .btn--outline {
-    @apply bg-transparent text-primary;
-    border: 1.5px solid var(--clr-primary);
+    background-color: transparent;
+    color:            var(--btn-primary-bg);
+    border:           1.5px solid var(--btn-primary-bg);
   }
-  .btn--outline:hover { @apply bg-primary text-white; }
+  .btn--outline:hover {
+    background-color: var(--btn-primary-bg);
+    color:            var(--btn-primary-text);
+  }
 
-  .btn--danger {
-    @apply bg-red-600 text-white;
-  }
+  /* Danger */
+  .btn--danger       { @apply bg-red-600 text-white border-none; }
   .btn--danger:hover { @apply bg-red-700; }
 
-  .btn--lg { @apply px-8 py-4 text-base; }
+  .btn--lg { padding: 1rem 2rem; font-size: 1rem; }
+  .btn--sm { padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
 
-  /* ── Form elements ── */
+  /* ── Inputs ───────────────────────────────────────────────────────────────*/
   .input {
-    @apply w-full px-4 py-3 text-sm font-body bg-surface text-primary
-           border border-border outline-none transition-all duration-150;
-    border-radius: var(--radius);
+    width:            100%;
+    padding:          0.75rem 1rem;
+    font-family:      var(--font-body);
+    font-size:        0.875rem;
+    background-color: var(--input-bg);
+    color:            var(--input-text);
+    border:           1px solid var(--input-border);
+    border-radius:    var(--radius);
+    outline:          none;
+    transition:       border-color 0.15s, box-shadow 0.15s;
   }
   .input:focus {
-    border-color: var(--clr-secondary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--clr-secondary) 15%, transparent);
+    border-color: var(--input-focus);
+    box-shadow:   0 0 0 3px color-mix(in srgb, var(--input-focus) 15%, transparent);
   }
-  .input--error { @apply border-red-400; }
-  .input::placeholder { @apply text-muted; }
+  .input--error    { border-color: #ef4444; }
+  .input::placeholder { color: var(--input-placeholder); }
 
-  .form-label { @apply block text-xs font-medium tracking-wide uppercase text-muted mb-1.5; }
-  .form-group { @apply flex flex-col gap-0; }
-  .form-error { @apply text-xs text-red-500 mt-1; }
-  .form-label-optional { @apply normal-case font-normal text-muted; }
-
-  /* ── Alerts ── */
-  .alert {
-    @apply px-4 py-3 text-sm rounded;
-    border-radius: var(--radius);
+  .form-label {
+    display:         block;
+    font-family:     var(--font-body);
+    font-size:       0.6875rem;
+    font-weight:     500;
+    letter-spacing:  0.1em;
+    text-transform:  uppercase;
+    color:           var(--text-muted);
+    margin-bottom:   0.375rem;
   }
-  .alert--error   { @apply bg-red-50 text-red-700 border border-red-200; }
-  .alert--success { @apply bg-green-50 text-green-700 border border-green-200; }
+  .form-group          { display: flex; flex-direction: column; }
+  .form-error          { font-size: 0.75rem; color: #ef4444; margin-top: 0.25rem; }
+  .form-label-optional { text-transform: none; font-weight: 400; color: var(--text-muted); }
 
-  /* ── Skeleton loader ── */
+  /* ── Alerts ───────────────────────────────────────────────────────────────*/
+  .alert          { padding: 0.75rem 1rem; font-size: 0.875rem; border-radius: var(--radius); }
+  .alert--error   { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+  .alert--success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+  /* ── Skeleton ─────────────────────────────────────────────────────────────*/
   .skeleton {
-    @apply bg-border animate-pulse rounded;
-    border-radius: var(--radius);
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.5; }
+    background-color: var(--bg-muted);
+    border-radius:    var(--radius);
+    @apply animate-pulse;
   }
 
-  /* ── Section helpers ── */
-  .section    { @apply py-20; }
-  .section--sm { @apply py-10; }
+  /* ── Section helpers ──────────────────────────────────────────────────────*/
+  .section     { padding-top: 5rem; padding-bottom: 5rem; }
+  .section--sm { padding-top: 2.5rem; padding-bottom: 2.5rem; }
 
   .section-label {
-    @apply text-xs font-medium tracking-[0.2em] uppercase text-secondary mb-3 block;
+    display:         block;
+    font-family:     var(--font-body);
+    font-size:       0.625rem;
+    font-weight:     500;
+    letter-spacing:  0.2em;
+    text-transform:  uppercase;
+    color:           var(--accent);
+    margin-bottom:   0.75rem;
   }
+
   .section-title {
-    @apply font-display text-4xl md:text-5xl font-medium leading-tight;
+    font-family:  var(--font-display);
+    font-size:    clamp(2rem, 4vw, 3.5rem);
+    font-weight:  400;
+    line-height:  1.1;
+    color:        var(--text-base);
   }
 }

@@ -1,26 +1,26 @@
-// src/components/layout/Layout.jsx — Pure Tailwind, zero scoped CSS
+// src/components/layout/Layout.jsx
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGuestAuth }   from '../../hooks/useGuestAuth.jsx';
 import { useHotelConfig } from '../../hooks/useHotelConfig.jsx';
+import { DEFAULT_LAYOUT } from '../../config/theme.js';
+import { Instagram, Facebook, Twitter, MessageCircle, User, MapPin, Phone } from 'lucide-react';
 
 export default function Layout() {
   const hotelConfig = useHotelConfig();
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled,  setScrolled]  = useState(false);
+  const [menuOpen,  setMenuOpen]  = useState(false);
   const { isLoggedIn, guest, logout } = useGuestAuth();
   const location = useLocation();
   const navigate  = useNavigate();
   const isHome    = location.pathname === '/';
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
+    const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
   useEffect(() => { setMenuOpen(false); }, [location]);
-
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -28,250 +28,334 @@ export default function Layout() {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const navBg = isHome && !scrolled
-    ? 'bg-transparent'
-    : 'bg-bg/95 backdrop-blur-md shadow-sm';
+  const navStyleKey   = hotelConfig.layout?.nav_style || DEFAULT_LAYOUT.nav_style;
+  const isTransparent = navStyleKey === 'transparent_scroll' && isHome && !scrolled;
 
-  const { contact, social, features } = hotelConfig;
+  const { contact = {}, social = {}, features = {} } = hotelConfig;
   const hasSocial = social?.instagram || social?.facebook || social?.twitter;
 
+  // Text colours adapt to transparency
+  const topBarBg   = isTransparent ? 'rgba(0,0,0,0.45)' : 'var(--brand)';
+  const mainNavBg  = isTransparent ? 'transparent'       : 'var(--bg-surface, #fff)';
+  const mainTextCol = isTransparent ? 'rgba(255,255,255,0.9)' : 'var(--text-base)';
+  const mainTextMuted = isTransparent ? 'rgba(255,255,255,0.55)' : 'var(--text-muted)';
+  const logoBrightness = isTransparent ? 'brightness(0) invert(1)' : 'none';
+
+  const NAV_LINKS = [
+    ['/', 'Home'],
+    ['/rooms', 'Rooms'],
+    ['/events', 'Events'],
+    ['/#about', 'About Us'],
+    ['/#contact', 'Contact'],
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        .topbar      { display: flex; }
+        .nav-links   { display: flex; }
+        .nav-link    { font-size: 13px; font-family: var(--font-body); font-weight: 500; text-decoration: none; padding: 6px 2px; position: relative; letter-spacing: 0.02em; transition: color 0.2s; }
+        .nav-link::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--accent); transform: scaleX(0); transition: transform 0.25s; transform-origin: left; }
+        .nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; }
 
-      {/* ── Navbar ────────────────────────────────────────────────────── */}
-      <header className={`fixed top-0 left-0 right-0 z-50 h-nav transition-all duration-300 ${navBg}`}>
-        <div className="container flex items-center justify-between h-full">
+        @media(max-width: 900px) {
+          .topbar      { display: none !important; }
+          .nav-links   { display: none !important; }
+          .nav-icons   { display: none !important; }
+          .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 2rem !important; }
+        }
+        @media(max-width: 480px) {
+          .footer-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
-          {/* Logo — both if available, otherwise whichever is set */}
-          <Link to="/" className={`flex items-center gap-2.5 font-display text-xl font-medium tracking-wider transition-colors ${isHome && !scrolled ? 'text-white' : 'text-primary'}`}>
+      {/* ── TOP BAR — address | phone | nav links | social ──────────────────── */}
+      <div className="topbar" style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 51,
+        background: topBarBg,
+        backdropFilter: isTransparent ? 'blur(6px)' : 'none',
+        transition: 'background 0.4s',
+        height: 38,
+        alignItems: 'center',
+        padding: '0 clamp(1.5rem,3.5vw,3rem)',
+        gap: 24,
+        justifyContent: 'space-between',
+      }}>
+        {/* Left: address + phone */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0 }}>
+          {contact.address && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-body)' }}>
+              <MapPin size={12} />{contact.address}
+            </span>
+          )}
+          {contact.phone && (
+            <a href={"tel:" + contact.phone} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.8)', textDecoration: 'none', fontFamily: 'var(--font-body)', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}>
+              <Phone size={12} />{contact.phone}
+            </a>
+          )}
+        </div>
+
+        {/* Right: quick links + social */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <Link to="/manage-booking" style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontFamily: 'var(--font-body)', fontWeight: 500, letterSpacing: '0.05em', transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.85)'}>Booking Now</Link>
+          <Link to="/rooms" style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontFamily: 'var(--font-body)', letterSpacing: '0.05em', transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.85)'}>About Us</Link>
+          {hasSocial && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 20 }}>
+              {social.facebook  && <a href={social.facebook}  target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.7)'}><Facebook size={15} /></a>}
+              {social.twitter   && <a href={social.twitter}   target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.7)'}><Twitter size={15} /></a>}
+              {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.7)'}><Instagram size={15} /></a>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── MAIN NAVBAR — logo left | nav links center | search+account right ── */}
+      <header style={{
+        position: 'fixed', top: 38, left: 0, right: 0, zIndex: 50,
+        height: 'var(--nav-h, 72px)',
+        background: mainNavBg,
+        borderBottom: isTransparent ? 'none' : '1px solid rgba(0,0,0,0.07)',
+        transition: 'background 0.4s, border-color 0.4s, top 0.4s',
+        backdropFilter: !isTransparent ? 'blur(12px)' : 'none',
+      }}>
+        <div style={{
+          width: '100%', height: '100%',
+          display: 'grid', gridTemplateColumns: 'auto 1fr',
+          alignItems: 'center',
+          padding: '0 clamp(1.5rem,3.5vw,3rem)',
+          boxSizing: 'border-box', gap: 32,
+        }}>
+
+          {/* LEFT: logo + hotel name */}
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             {hotelConfig.logoUrl && (
-              <img src={hotelConfig.logoUrl} alt={hotelConfig.shortName} className="h-9 w-auto object-contain" />
+              <img src={hotelConfig.logoUrl} alt={hotelConfig.name}
+                style={{ height: 42, width: 'auto', objectFit: 'contain', filter: logoBrightness, transition: 'filter 0.4s' }} />
             )}
-            {hotelConfig.shortName && (
-              <span>{hotelConfig.shortName}</span>
-            )}
+            <div>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: mainTextCol, margin: 0, lineHeight: 1.2, transition: 'color 0.4s', whiteSpace: 'nowrap' }}>
+                {hotelConfig.name || 'The Grand'}
+              </p>
+              {hotelConfig.tagline && (
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.08em', color: mainTextMuted, margin: 0, textTransform: 'uppercase', transition: 'color 0.4s' }}>
+                  {hotelConfig.shortName || ''}
+                </p>
+              )}
+            </div>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            {['/', '/rooms'].map((path, i) => {
-              const label = ['Home', 'Rooms'][i];
-              const active = location.pathname === path;
-              return (
-                <Link key={path} to={path}
-                  className={`text-sm tracking-wide transition-colors
-                    ${isHome && !scrolled ? 'text-white/80 hover:text-white' : 'text-muted hover:text-primary'}
-                    ${active ? (isHome && !scrolled ? '!text-white' : '!text-primary font-medium') : ''}`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-            {isLoggedIn ? (
-              <Link to="/account"
-                className={`text-sm tracking-wide transition-colors ${isHome && !scrolled ? 'text-white/80 hover:text-white' : 'text-muted hover:text-primary'}`}>
-                My Account
-              </Link>
-            ) : (
-              <Link to="/login"
-                className={`text-sm tracking-wide transition-colors ${isHome && !scrolled ? 'text-white/80 hover:text-white' : 'text-muted hover:text-primary'}`}>
-                Sign In
-              </Link>
-            )}
-            <Link to="/book"
-              className={`btn btn--primary text-xs tracking-widest uppercase py-2.5 px-5 ${isHome && !scrolled ? 'bg-secondary' : ''}`}>
-              Book Now
-            </Link>
-          </nav>
+          {/* RIGHT: nav links + user icon + hamburger — all right-aligned together */}
+          <div className="nav-links" style={{ justifyContent: 'flex-end', alignItems: 'center', gap: 32 }}>
 
-          {/* Mobile right */}
-          <div className="flex md:hidden items-center gap-3">
-            {isLoggedIn ? (
-              <Link to="/account" aria-label="My account"
-                className={`p-1 transition-colors ${isHome && !scrolled ? 'text-white' : 'text-primary'}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="22" height="22">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                </svg>
+            {/* Nav links */}
+            {NAV_LINKS.map(([path, label]) => (
+              <a key={path} href={path}
+                className={'nav-link' + (location.pathname === path.split('#')[0] ? ' active' : '')}
+                style={{ color: mainTextCol, transition: 'color 0.2s', textDecoration: 'none' }}
+                onMouseEnter={e => e.currentTarget.style.color = isTransparent ? '#fff' : 'var(--accent)'}
+                onMouseLeave={e => e.currentTarget.style.color = mainTextCol}>
+                {label}{label === 'Rooms' ? ' ▾' : ''}
+              </a>
+            ))}
+
+            {/* Divider */}
+            <span style={{ width: 1, height: 18, background: mainTextMuted, opacity: 0.4 }} />
+
+            {/* User icon — tooltip on hover when logged in, navigates to /account */}
+            <div style={{ position: 'relative' }} className="nav-icons user-icon-wrap">
+              <Link
+                to={isLoggedIn ? '/account' : '/login'}
+                style={{ color: mainTextCol, display: 'flex', alignItems: 'center', gap: 7, padding: 4, transition: 'color 0.2s', textDecoration: 'none' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = isTransparent ? '#fff' : 'var(--accent)';
+                  const tip = e.currentTarget.parentNode.querySelector('.user-tooltip');
+                  if (tip) tip.style.opacity = '1';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = mainTextCol;
+                  const tip = e.currentTarget.parentNode.querySelector('.user-tooltip');
+                  if (tip) tip.style.opacity = '0';
+                }}
+              >
+                <User size={18} />
+                {isLoggedIn && (
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {guest?.full_name?.split(' ')[0] || 'Account'}
+                  </span>
+                )}
               </Link>
-            ) : (
-              <Link to="/login"
-                className={`text-xs font-medium tracking-wide transition-colors ${isHome && !scrolled ? 'text-white' : 'text-primary'}`}>
-                Sign In
-              </Link>
-            )}
-            <button
-              onClick={() => setMenuOpen(v => !v)}
-              aria-label="Toggle menu"
-              className={`flex flex-col gap-1.5 p-1 transition-colors ${isHome && !scrolled ? 'text-white' : 'text-primary'}`}
-            >
-              <span className={`block h-px w-6 bg-current transition-all duration-300 ${menuOpen ? 'rotate-45 translate-y-2.5' : ''}`} />
-              <span className={`block h-px w-6 bg-current transition-all duration-300 ${menuOpen ? 'opacity-0' : ''}`} />
-              <span className={`block h-px w-6 bg-current transition-all duration-300 ${menuOpen ? '-rotate-45 -translate-y-2.5' : ''}`} />
+              {/* Tooltip — only shown when logged in and hovering */}
+              {isLoggedIn && (
+                <div className="user-tooltip" style={{
+                  position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+                  background: 'var(--bg-surface, #fff)',
+                  color: 'var(--text-base, #111)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  padding: '10px 16px',
+                  fontSize: 12, fontFamily: 'var(--font-body)',
+                  whiteSpace: 'nowrap',
+                  opacity: 0,
+                  transition: 'opacity 0.2s',
+                  pointerEvents: 'none',
+                  zIndex: 100,
+                  borderTop: '2px solid var(--accent)',
+                }}>
+                  {guest?.full_name || 'My Account'}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile hamburger */}
+            <button type="button" onClick={() => setMenuOpen(v => !v)} aria-label="Toggle menu"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 4px', display: 'none', flexDirection: 'column', gap: 5 }}
+              className="mob-hamburger">
+              <span style={{ display: 'block', width: 22, height: 1.5, background: mainTextCol, transition: 'transform 0.35s', transform: menuOpen ? 'translateY(6.5px) rotate(45deg)' : 'none', borderRadius: 1 }} />
+              <span style={{ display: 'block', width: 22, height: 1.5, background: mainTextCol, transition: 'opacity 0.25s', opacity: menuOpen ? 0 : 1, borderRadius: 1 }} />
+              <span style={{ display: 'block', width: 22, height: 1.5, background: mainTextCol, transition: 'transform 0.35s', transform: menuOpen ? 'translateY(-6.5px) rotate(-45deg)' : 'none', borderRadius: 1 }} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile overlay */}
-      {menuOpen && (
-        <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMenuOpen(false)} />
-      )}
+      {/* Mobile hamburger show */}
+      <style>{`
+        @media(max-width:900px){
+          .mob-hamburger { display: flex !important; }
+          header { top: 0 !important; height: 64px !important; }
+        }
+      `}</style>
 
-      {/* Mobile drawer */}
-      <div className={`fixed top-0 right-0 bottom-0 w-4/5 max-w-sm bg-surface z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="p-6 border-b border-border">
-          {isLoggedIn ? (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">Hello, {guest?.full_name?.split(' ')[0]}</span>
-              <span className="text-xs text-muted">{guest?.email}</span>
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              <Link to="/login"    className="btn btn--outline flex-1 justify-center text-xs">Sign In</Link>
-              <Link to="/register" className="btn btn--primary flex-1 justify-center text-xs">Register</Link>
-            </div>
-          )}
+      {/* ── Mobile slide-in menu ─────────────────────────────────────────────── */}
+      {menuOpen && <div style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,0.4)' }} onClick={() => setMenuOpen(false)} />}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, bottom: 0,
+        width: 'min(320px, 85vw)', background: 'var(--bg-page)',
+        zIndex: 60, transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1)',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: menuOpen ? '4px 0 40px rgba(0,0,0,0.2)' : 'none',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border-soft)' }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-base)' }}>{hotelConfig.name}</span>
+          <button type="button" onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-muted)', lineHeight: 1 }}>✕</button>
         </div>
-
-        <nav className="flex flex-col py-4 flex-1">
-          {[['/', 'Home'], ['/rooms', 'Rooms & Rates'], ['/book', 'Book a Room']].map(([path, label]) => (
-            <Link key={path} to={path}
-              className={`px-6 py-4 text-sm tracking-wide border-b border-border/50 transition-colors hover:bg-bg
-                ${path === '/book' ? 'text-secondary font-medium' : 'text-primary'}`}>
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1rem 0' }}>
+          {[['/', 'Home'], ['/rooms', 'Rooms & Suites'], ['/events', 'Events & Venues'], ['/book', 'Book a Room'], ['/manage-booking', 'Manage Booking'], [isLoggedIn ? '/account' : '/login', isLoggedIn ? 'My Account' : 'Sign In']].map(([path, label]) => (
+            <Link key={path} to={path} style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--text-base)', textDecoration: 'none', padding: '14px 24px', borderBottom: '1px solid var(--border-soft)', transition: 'color 0.2s, padding-left 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.paddingLeft = '32px'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-base)'; e.currentTarget.style.paddingLeft = '24px'; }}>
               {label}
             </Link>
           ))}
           {isLoggedIn && (
-            <>
-              <Link to="/account" className="px-6 py-4 text-sm tracking-wide border-b border-border/50 hover:bg-bg">My Bookings</Link>
-              <button className="px-6 py-4 text-sm text-left text-muted hover:bg-bg transition-colors" onClick={handleLogout}>Sign Out</button>
-            </>
+            <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '16px 24px' }}>
+              Sign Out
+            </button>
           )}
         </nav>
-
-        <div className="p-6 border-t border-border text-xs text-muted flex flex-col gap-1">
-          <a href={`tel:${contact.phone}`} className="hover:text-secondary transition-colors">{contact.phone}</a>
-          <span>{contact.address}</span>
+        <div style={{ padding: '16px 24px 28px', borderTop: '1px solid var(--border-soft)' }}>
+          {contact.phone && <a href={"tel:"+contact.phone} style={{ display: 'block', fontSize: 13, color: 'var(--accent)', textDecoration: 'none', marginBottom: 6, fontFamily: 'var(--font-body)' }}>{contact.phone}</a>}
+          {contact.address && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>{contact.address}</p>}
         </div>
       </div>
 
-      {/* ── Main ──────────────────────────────────────────────────────── */}
-      <main className="flex-1">
+      {/* ── Main content ─────────────────────────────────────────────────────── */}
+      <main style={{ flex: 1 }}>
         <Outlet />
       </main>
 
-      {/* ── Footer ────────────────────────────────────────────────────── */}
-      <footer className="bg-primary text-white/70">
-        <div className="container py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-
-            {/* Brand — logo, name, tagline, social icons */}
-            <div className="md:col-span-1 flex flex-col gap-3">
-              {hotelConfig.logoUrl && (
-                <img
-                  src={hotelConfig.logoUrl}
-                  alt={hotelConfig.name}
-                  className="h-10 w-auto object-contain brightness-0 invert opacity-80"
-                />
-              )}
-              <p className="font-display text-2xl text-white font-medium">{hotelConfig.name}</p>
-              <p className="text-sm">{hotelConfig.tagline}</p>
-
+      {/* ── Footer ───────────────────────────────────────────────────────────── */}
+      <footer style={{ background: 'var(--footer-bg)', color: 'var(--footer-text)' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(4rem,8vw,7rem) clamp(2rem,8vw,6rem) clamp(2.5rem,4vw,3.5rem)' }}>
+          <div className="footer-grid">
+            {/* Brand col */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {hotelConfig.logoUrl
+                ? <img src={hotelConfig.logoUrl} alt={hotelConfig.name} style={{ height: 40, width: 'auto', objectFit: 'contain', opacity: 0.75 }} />
+                : <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 300, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--footer-heading)' }}>{hotelConfig.name}</span>
+              }
+              <p style={{ fontSize: 12, color: 'var(--footer-text)', opacity: 0.6, margin: 0, fontFamily: 'var(--font-body)', lineHeight: 1.7, maxWidth: 260 }}>
+                {hotelConfig.description || 'A world-class hotel experience.'}
+              </p>
               {hasSocial && (
-                <div className="flex items-center gap-4 mt-1">
-                  {social.instagram && (
-                    <a href={social.instagram} target="_blank" rel="noopener noreferrer"
-                      aria-label="Instagram" className="text-white/40 hover:text-secondary transition-colors">
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                      </svg>
-                    </a>
-                  )}
-                  {social.facebook && (
-                    <a href={social.facebook} target="_blank" rel="noopener noreferrer"
-                      aria-label="Facebook" className="text-white/40 hover:text-secondary transition-colors">
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                      </svg>
-                    </a>
-                  )}
-                  {social.twitter && (
-                    <a href={social.twitter} target="_blank" rel="noopener noreferrer"
-                      aria-label="X / Twitter" className="text-white/40 hover:text-secondary transition-colors">
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.632 5.905-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                      </svg>
-                    </a>
-                  )}
+                <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
+                  {social.facebook  && <a href={social.facebook}  target="_blank" rel="noopener noreferrer" style={{ color: 'var(--footer-heading)', opacity: 0.45, transition: 'opacity 0.2s' }} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0.45}><Facebook size={18} /></a>}
+                  {social.twitter   && <a href={social.twitter}   target="_blank" rel="noopener noreferrer" style={{ color: 'var(--footer-heading)', opacity: 0.45, transition: 'opacity 0.2s' }} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0.45}><Twitter size={18} /></a>}
+                  {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--footer-heading)', opacity: 0.45, transition: 'opacity 0.2s' }} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0.45}><Instagram size={18} /></a>}
                 </div>
               )}
             </div>
 
             {/* Navigate */}
             <div>
-              <h4 className="text-white text-xs font-medium tracking-widest uppercase mb-4">Navigate</h4>
-              <div className="flex flex-col gap-3 text-sm">
-                <Link to="/"      className="hover:text-white transition-colors">Home</Link>
-                <Link to="/rooms" className="hover:text-white transition-colors">Rooms &amp; Rates</Link>
-                <Link to="/book"  className="hover:text-white transition-colors">Book a Room</Link>
-                <Link to={isLoggedIn ? '/account' : '/login'} className="hover:text-white transition-colors">
-                  {isLoggedIn ? 'My Account' : 'Sign In'}
-                </Link>
-              </div>
+              <FooterHeading>Navigate</FooterHeading>
+              <FooterLinks links={[['/', 'Home'], ['/rooms', 'Rooms & Suites'], ['/events', 'Events & Venues'], ['/book', 'Book a Room'], ['/manage-booking', 'Manage Booking'], [isLoggedIn ? '/account' : '/login', isLoggedIn ? 'My Account' : 'Sign In']]} />
             </div>
 
-            {/* Contact — all fields from HMS config */}
+            {/* Contact */}
             <div>
-              <h4 className="text-white text-xs font-medium tracking-widest uppercase mb-4">Contact</h4>
-              <div className="flex flex-col gap-3 text-sm">
-                <a href={`tel:${contact.phone}`} className="hover:text-white transition-colors">{contact.phone}</a>
-                <a href={`mailto:${contact.email}`} className="hover:text-white transition-colors">{contact.email}</a>
-                {contact.website && (
-                  <a href={contact.website} target="_blank" rel="noopener noreferrer"
-                    className="hover:text-white transition-colors">{contact.website}</a>
-                )}
-                <p>{contact.address}</p>
-                {contact.googleMapsUrl && (
-                  <a href={contact.googleMapsUrl} target="_blank" rel="noopener noreferrer"
-                    className="hover:text-white transition-colors text-xs underline underline-offset-2">
-                    View on Map ↗
-                  </a>
-                )}
+              <FooterHeading>Get in Touch</FooterHeading>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {contact.phone   && <a href={"tel:"+contact.phone}     style={FLS}>{contact.phone}</a>}
+                {contact.email   && <a href={"mailto:"+contact.email}  style={FLS}>{contact.email}</a>}
+                {contact.address && <p style={{ ...FLS, lineHeight: 1.7, margin: 0 }}>{contact.address}</p>}
+                {contact.googleMapsUrl && <a href={contact.googleMapsUrl} target="_blank" rel="noopener noreferrer" style={{ ...FLS, textDecoration: 'underline', textUnderlineOffset: 3 }}>View on map ↗</a>}
               </div>
             </div>
 
             {/* Hours */}
             <div>
-              <h4 className="text-white text-xs font-medium tracking-widest uppercase mb-4">Hours</h4>
-              <div className="flex flex-col gap-3 text-sm">
-                <p>Check-in: {contact.checkIn}</p>
-                <p>Check-out: {contact.checkOut}</p>
-                <p>Front Desk: 24 hours</p>
+              <FooterHeading>Hours</FooterHeading>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'var(--footer-text)', fontFamily: 'var(--font-body)', opacity: 0.7 }}>
+                {contact.checkIn  && <p style={{ margin: 0 }}>Check-in: {contact.checkIn}</p>}
+                {contact.checkOut && <p style={{ margin: 0 }}>Check-out: {contact.checkOut}</p>}
+                <p style={{ margin: 0 }}>Front Desk: 24 / 7</p>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="border-t border-white/10 py-5">
-          <div className="container text-xs text-white/40">
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '1.2rem clamp(2rem,8vw,6rem)' }}>
+          <p style={{ fontSize: 11, color: 'var(--footer-text)', opacity: 0.35, margin: 0, fontFamily: 'var(--font-body)' }}>
             © {new Date().getFullYear()} {hotelConfig.name}. All rights reserved.
-          </div>
+          </p>
         </div>
       </footer>
 
       {/* WhatsApp FAB */}
       {features.whatsappCTA && contact.whatsapp && (
-        <a href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`}
-          target="_blank" rel="noopener noreferrer"
-          aria-label="Chat on WhatsApp"
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110"
-          style={{ backgroundColor: '#25D366' }}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26" className="text-white">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-          </svg>
+        <a href={"https://wa.me/"+contact.whatsapp.replace(/[^0-9]/g,'')}
+          target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"
+          style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50, width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#25D366', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', transition: 'transform 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+          <MessageCircle size={26} color="white" />
         </a>
       )}
     </div>
   );
 }
+
+function FooterHeading({ children }) {
+  return <h4 style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.35em', textTransform: 'uppercase', color: 'var(--footer-heading)', margin: '0 0 18px', fontFamily: 'var(--font-body)' }}>{children}</h4>;
+}
+function FooterLinks({ links }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {links.map(([to, label]) => (
+        <Link key={to+label} to={to} style={FLS}
+          onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '0.55'}>
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+const FLS = { fontSize: 13, color: 'var(--footer-link-hover)', textDecoration: 'none', opacity: 0.55, transition: 'opacity 0.2s', fontFamily: 'var(--font-body)' };

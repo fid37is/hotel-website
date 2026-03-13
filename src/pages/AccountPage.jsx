@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate }   from 'react-router-dom';
 import { useGuestAuth }        from '../hooks/useGuestAuth.jsx';
 import { useHotelConfig }      from '../hooks/useHotelConfig.jsx';
-import { guestAuthApi }        from '../services/api.js';
+import { guestAuthApi } from '../services/api.js';
 import { fmt }                 from '../utils/currency.js';
 
 const STATUS = {
@@ -96,8 +96,12 @@ export default function AccountPage() {
     try {
       await guestAuthApi.cancelReservation(id, cancelReason, token);
       setCancellingId(null); setCancelReason('');
-      setReservations(rs => rs.map(r => r.id === id ? { ...r, status: 'cancelled' } : r));
-    } catch (err) { setCancelError(err.message || 'Failed. Please call us.'); }
+      await loadReservations();
+      setActiveTab('cancelled'); // show the user their cancelled reservation
+    } catch (err) {
+      setCancelError(err.message || 'Failed. Please call us.');
+      await loadReservations(); // also reload on error to restore any stale state
+    }
     finally { setCancelling(false); }
   };
 
@@ -109,14 +113,14 @@ export default function AccountPage() {
   const checkedInRes = reservations.find(r => r.status === 'checked_in');
 
   if (authLoading) return (
-    <div className="container max-w-6xl pt-nav py-8 grid lg:grid-cols-5 gap-6">
+    <div className="container max-w-6xl py-8 grid lg:grid-cols-5 gap-6" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px + 2rem)" }}>
       <div className="lg:col-span-2 space-y-4"><div className="skeleton h-40 rounded-xl"/><div className="skeleton h-96 rounded-xl"/></div>
       <div className="lg:col-span-3 space-y-4"><div className="skeleton h-12 rounded-xl"/><div className="skeleton h-64 rounded-xl"/></div>
     </div>
   );
 
   return (
-    <div className="bg-bg min-h-screen pt-nav pb-12">
+    <div className="bg-bg min-h-screen pb-12" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px + 2rem)" }}>
       <div className="container">
         <div className="grid lg:grid-cols-5 gap-6 items-start">
 

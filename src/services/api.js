@@ -130,6 +130,9 @@ export const guestAuthApi = {
   myReservationById: (id, token) =>
     request('GET', `/auth/my-reservations/${id}`, { token }),
 
+  cancelReservation: (id, reason, token) =>
+    request('PATCH', `/reservations/${id}/cancel`, { body: { reason }, token }),
+
   forgotPassword: (email) =>
     request('POST', '/auth/forgot-password', { body: { email } }),
 
@@ -162,4 +165,13 @@ export const chatApi = {
       body: { content },
       token,
     }),
+};
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+export const eventsApi = {
+  submitEnquiry: (payload) =>
+    request('POST', '/events/enquiry', { body: payload }),
+
+  getVenues: () =>
+    request('GET', '/events/venues'),
 };
