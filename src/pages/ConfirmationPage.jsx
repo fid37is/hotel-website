@@ -164,6 +164,9 @@ export default function ConfirmationPage() {
               WhatsApp Us
             </a>
           )}
+          <Link to="/manage-booking" className="btn btn--outline text-center">
+            Manage Booking
+          </Link>
           <button className="btn btn--primary" onClick={handleDone}>
             Back to Home
           </button>

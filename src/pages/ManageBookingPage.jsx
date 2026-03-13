@@ -11,9 +11,9 @@ const fmt = (amt) => new Intl.NumberFormat('en-NG', {
 const STATUS_CLS = {
   confirmed:   'bg-green-100 text-green-700',
   checked_in:  'bg-blue-100 text-blue-700',
-  checked_out: 'bg-gray-100 text-gray-600',
+  checked_out: 'bg-border/50 text-muted',
   cancelled:   'bg-red-100 text-red-600',
-  default:     'bg-gray-100 text-gray-600',
+  default:     'bg-border/50 text-muted',
 };
 
 export default function ManageBookingPage() {
@@ -68,7 +68,7 @@ export default function ManageBookingPage() {
   const canCancel = reservation && !['cancelled', 'checked_out', 'checked_in'].includes(reservation.status) && !cancelDone;
 
   return (
-    <div className="bg-bg min-h-screen pt-nav pb-10">
+    <div className="bg-bg min-h-screen pb-10" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px + 2rem)" }}>
       <div className="container max-w-2xl">
         <div className="mb-10">
           <p className="section-label">Guest Services</p>
@@ -87,7 +87,7 @@ export default function ManageBookingPage() {
               <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email used at booking" />
             </div>
             {error && <div className="alert alert--error">{error}</div>}
-            <button type="submit" className="btn btn--primary" disabled={loading}>
+            <button type="submit" className="btn btn--primary w-full justify-center" disabled={loading}>
               {loading ? 'Looking up…' : 'Find My Booking'}
             </button>
             <p className="text-xs text-muted text-center">The booking link in your confirmation email will sign you in automatically.</p>

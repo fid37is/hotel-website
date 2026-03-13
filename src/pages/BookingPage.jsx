@@ -19,14 +19,7 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    const ci = searchParams.get('checkIn');
-    const co = searchParams.get('checkOut');
-    const g  = searchParams.get('guests');
-    if (ci && !state.search.checkIn) {
-      dispatch({ type: 'SET_SEARCH', payload: { checkIn: ci, checkOut: co || '', guests: g ? Number(g) : 1 } });
-    }
-  }, []);
+  // URL params are read directly into local state below — no effect needed
 
   const [step, setStep] = useState(0);
   const [availableTypes,  setAvailableTypes]  = useState([]);
@@ -54,9 +47,9 @@ export default function BookingPage() {
 
   const today    = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const [checkIn,     setCheckIn]     = useState(state.search.checkIn  || '');
-  const [checkOut,    setCheckOut]    = useState(state.search.checkOut || '');
-  const [guestCount,  setGuestCount]  = useState(state.search.guests   || 1);
+  const [checkIn,     setCheckIn]     = useState(searchParams.get('checkIn')  || state.search.checkIn  || '');
+  const [checkOut,    setCheckOut]    = useState(searchParams.get('checkOut') || state.search.checkOut || '');
+  const [guestCount,  setGuestCount]  = useState(Number(searchParams.get('guests')) || state.search.guests || 1);
   // Clear preselectedTypeId from search state after reading it (one-time use)
   useEffect(() => {
     if (state.search.preselectedTypeId) {
@@ -171,9 +164,9 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="bg-bg min-h-screen pt-nav pb-10">
+    <div className="bg-bg min-h-screen pb-10" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px)" }}>
       <div className="container max-w-5xl">
-        <div className="flex items-center justify-center gap-0 mb-10">
+        <div className="flex items-center justify-center gap-0 pt-8 mb-10">
           {STEPS.map((label, i) => (
             <div key={i} className="flex items-center">
               <div className={`flex items-center gap-2 ${i === step ? 'text-primary' : i < step ? 'text-secondary' : 'text-muted'}`}>

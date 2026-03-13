@@ -77,14 +77,14 @@ export default function RoomDetailPage() {
   };
 
   if (loading) return (
-    <div className="container py-12 flex flex-col gap-6">
+    <div className="container py-12 flex flex-col gap-6" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px + 3rem)" }}>
       <div className="skeleton h-[480px] rounded-lg" />
       <div className="skeleton h-48 rounded-lg" />
     </div>
   );
 
   if (error || !room) return (
-    <div className="container py-20 flex flex-col items-center gap-6 text-center">
+    <div className="container py-20 flex flex-col items-center gap-6 text-center" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px + 5rem)" }}>
       <p className="text-muted">{error || 'Room not found.'}</p>
       <Link to="/rooms" className="btn btn--primary">Back to Rooms</Link>
     </div>
@@ -95,7 +95,7 @@ export default function RoomDetailPage() {
   return (
     <div className="pb-24">
       {/* Page header */}
-      <div className="bg-bg border-b border-border py-6 pt-nav">
+      <div className="bg-bg border-b border-border py-6" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px + 1.5rem)" }}>
         <div className="container">
           <Link to="/rooms" className="text-sm text-muted hover:text-secondary transition-colors mb-2 block">← All Rooms</Link>
           <div className="flex flex-wrap items-center gap-3">
@@ -107,48 +107,24 @@ export default function RoomDetailPage() {
         </div>
       </div>
 
-      {/* Hero gallery — room TYPE media (marketing images) */}
+      {/* Hero gallery — all individual room photos merged into one carousel */}
       <div className="container py-8">
-        <RoomGallery images={images} videoUrl={room.video_url || null} roomName={room.name} />
+        {(() => {
+          // Collect all images across every individual room in this type
+          const allImages = individualRooms.flatMap(r =>
+            (r.media || [])
+              .filter(m => m.type === 'image' || m.type === 'gif')
+              .map(m => m.url)
+          );
+          // Fall back to type-level marketing photos if no individual room photos exist
+          const typeImages = getTypeImages(room);
+          const images = allImages.length > 0 ? allImages : typeImages;
+          const videoUrl = individualRooms.length > 0
+            ? (individualRooms[0].media || []).find(m => m.type === 'video')?.url || room.video_url || null
+            : room.video_url || null;
+          return <RoomGallery images={images} videoUrl={videoUrl} roomName={room.name} autoPlay />;
+        })()}
       </div>
-
-      {/* Individual rooms section — each room's own photos */}
-      {individualRooms.length > 0 && individualRooms.some(r => r.media?.length > 0) && (
-        <div className="container pb-8">
-          <h2 className="font-display text-2xl font-medium mb-5">Our {room.name} Rooms</h2>
-          {/* Room selector tabs */}
-          <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-            {individualRooms.map((r, i) => (
-              <button key={r.id} onClick={() => setActiveRoomIdx(i)}
-                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all
-                  ${activeRoomIdx === i
-                    ? 'bg-primary text-white border-primary'
-                    : 'border-border text-muted hover:border-secondary/50'}`}>
-                Room {r.number}
-                {r.floor ? <span className="text-xs opacity-60 ml-1">· Floor {r.floor}</span> : null}
-              </button>
-            ))}
-          </div>
-          {/* Active room gallery */}
-          {(() => {
-            const activeRoom = individualRooms[activeRoomIdx];
-            const roomImgs  = getRoomImages(activeRoom);
-            const roomVideo = getRoomVideo(activeRoom);
-            return (
-              <div>
-                <RoomGallery
-                  images={roomImgs}
-                  videoUrl={roomVideo}
-                  roomName={`Room ${activeRoom?.number}`}
-                />
-                {activeRoom?.notes && (
-                  <p className="text-xs text-muted mt-3 italic">{activeRoom.notes}</p>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
 
       {/* Content */}
       <div className="container">
