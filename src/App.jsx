@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HotelConfigProvider } from './hooks/useHotelConfig.jsx';
 import { GuestAuthProvider }   from './hooks/useGuestAuth.jsx';
+import { GuestNotificationsProvider } from './hooks/useGuestNotifications.jsx';
 import { BookingProvider }     from './hooks/useBooking.jsx';
 import Layout             from './components/layout/Layout.jsx';
 import HomePage           from './pages/HomePage.jsx';
@@ -18,12 +19,32 @@ import NotFoundPage       from './pages/NotFoundPage.jsx';
 import ChatPage            from './pages/ChatPage.jsx';
 import ManageBookingPage  from './pages/ManageBookingPage.jsx';
 import EventsPage         from './pages/EventsPage.jsx';
+import DiningPage         from './pages/DiningPage.jsx';
+import WellnessPage       from './pages/WellnessPage.jsx';
+import ConciergePage      from './pages/ConciergePage.jsx';
+import ExploreHotelPage   from './pages/ExploreHotelPage.jsx';
+import OffersPage         from './pages/OffersPage.jsx';
+import AboutPage          from './pages/AboutPage.jsx';
+import ContactPage        from './pages/ContactPage.jsx';
+
+
+// Bridge: reads token from GuestAuth and passes to GuestNotificationsProvider
+import { useGuestAuth } from './hooks/useGuestAuth.jsx';
+function GuestAuthNotificationsWrapper({ children }) {
+  const { token } = useGuestAuth();
+  return (
+    <GuestNotificationsProvider guestToken={token}>
+      {children}
+    </GuestNotificationsProvider>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <HotelConfigProvider>
         <GuestAuthProvider>
+          <GuestAuthNotificationsWrapper>
           <BookingProvider>
             <Routes>
               <Route element={<Layout />}>
@@ -40,10 +61,18 @@ export default function App() {
                 <Route path="/chat"                    element={<ChatPage />} />
                 <Route path="/manage-booking"          element={<ManageBookingPage />} />
                 <Route path="/events"                   element={<EventsPage />} />
+                <Route path="/dining"                   element={<DiningPage />} />
+                <Route path="/wellness"                 element={<WellnessPage />} />
+                <Route path="/concierge"                element={<ConciergePage />} />
+                <Route path="/explore"                  element={<ExploreHotelPage />} />
+                <Route path="/offers"                   element={<OffersPage />} />
+                <Route path="/about"                    element={<AboutPage />} />
+                <Route path="/contact"                  element={<ContactPage />} />
                 <Route path="*"                    element={<NotFoundPage />} />
               </Route>
             </Routes>
           </BookingProvider>
+          </GuestAuthNotificationsWrapper>
         </GuestAuthProvider>
       </HotelConfigProvider>
     </BrowserRouter>

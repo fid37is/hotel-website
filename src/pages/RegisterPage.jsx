@@ -16,6 +16,37 @@ const EyeIcon = ({ open }) => open ? (
   </svg>
 );
 
+// ── Field defined OUTSIDE RegisterPage so it is never recreated on render ──
+// Defining it inside caused React to unmount/remount the input on every
+// keystroke, moving the cursor to the end of the field.
+function Field({ name, label, type = 'text', placeholder, optional, showToggle, show, onToggle, value, onChange, error }) {
+  return (
+    <div className="form-group">
+      <label className="form-label">
+        {label}{optional && <span className="form-label-optional ml-1">optional</span>}
+      </label>
+      <div className="relative">
+        <input
+          type={show !== undefined ? (show ? 'text' : type) : type}
+          className={`input ${error ? 'input--error' : ''} ${showToggle ? 'pr-12' : ''}`}
+          placeholder={placeholder}
+          value={value}
+          onChange={e => onChange(name, e.target.value)}
+          autoComplete={type === 'password' ? 'new-password' : name}
+        />
+        {showToggle && (
+          <button type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors"
+            onClick={onToggle}>
+            <EyeIcon open={show} />
+          </button>
+        )}
+      </div>
+      {error && <span className="form-error">{error}</span>}
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   const hotelConfig = useHotelConfig();
   const { register, isLoggedIn } = useGuestAuth();
@@ -39,10 +70,10 @@ export default function RegisterPage() {
 
   const validate = () => {
     const e = {};
-    if (!form.full_name.trim())                      e.full_name         = 'Full name is required';
-    if (!form.email.trim())                          e.email             = 'Email is required';
-    if (form.password.length < 8)                    e.password          = 'Minimum 8 characters';
-    if (form.password !== form.confirm_password)     e.confirm_password  = 'Passwords do not match';
+    if (!form.full_name.trim())                  e.full_name        = 'Full name is required';
+    if (!form.email.trim())                      e.email            = 'Email is required';
+    if (form.password.length < 8)                e.password         = 'Minimum 8 characters';
+    if (form.password !== form.confirm_password) e.confirm_password = 'Passwords do not match';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -55,28 +86,6 @@ export default function RegisterPage() {
     catch (err) { setError(err.message || 'Registration failed. Please try again.'); }
     finally     { setLoading(false); }
   };
-
-  const Field = ({ name, label, type = 'text', placeholder, optional, showToggle, show, onToggle }) => (
-    <div className="form-group">
-      <label className="form-label">
-        {label}{optional && <span className="form-label-optional ml-1">optional</span>}
-      </label>
-      <div className="relative">
-        <input type={show !== undefined ? (show ? 'text' : type) : type}
-          className={`input ${errors[name] ? 'input--error' : ''} ${showToggle ? 'pr-12' : ''}`}
-          placeholder={placeholder} value={form[name]}
-          onChange={e => set(name, e.target.value)}
-          autoComplete={type === 'password' ? 'new-password' : name} />
-        {showToggle && (
-          <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors"
-            onClick={onToggle}>
-            <EyeIcon open={show} />
-          </button>
-        )}
-      </div>
-      {errors[name] && <span className="form-error">{errors[name]}</span>}
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center pt-nav px-4 pb-12">
@@ -91,14 +100,21 @@ export default function RegisterPage() {
           {error && <div className="alert alert--error mb-5">{error}</div>}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <Field name="full_name"        label="Full Name"       placeholder="John Doe" />
-            <Field name="email"            label="Email Address"   type="email" placeholder="you@example.com" />
-            <Field name="phone"            label="Phone Number"    type="tel" placeholder="+234 800 000 0000" optional />
-            <Field name="address"          label="Address"         placeholder="Street, City, State" optional />
-            <Field name="password"         label="Password"        type="password" placeholder="Min. 8 characters"
-              showToggle show={showPwd}  onToggle={() => setShowPwd(v => !v)} />
+            <Field name="full_name"        label="Full Name"        placeholder="John Doe"
+              value={form.full_name}        onChange={set} error={errors.full_name} />
+            <Field name="email"            label="Email Address"    type="email" placeholder="you@example.com"
+              value={form.email}            onChange={set} error={errors.email} />
+            <Field name="phone"            label="Phone Number"     type="tel" placeholder="+234 800 000 0000" optional
+              value={form.phone}            onChange={set} error={errors.phone} />
+            <Field name="address"          label="Address"          placeholder="Street, City, State" optional
+              value={form.address}          onChange={set} error={errors.address} />
+            <Field name="password"         label="Password"         type="password" placeholder="Min. 8 characters"
+              showToggle show={showPwd}  onToggle={() => setShowPwd(v => !v)}
+              value={form.password}         onChange={set} error={errors.password} />
             <Field name="confirm_password" label="Confirm Password" type="password" placeholder="Repeat password"
-              showToggle show={showConf} onToggle={() => setShowConf(v => !v)} />
+              showToggle show={showConf} onToggle={() => setShowConf(v => !v)}
+              value={form.confirm_password} onChange={set} error={errors.confirm_password} />
+
             <button type="submit" className="btn btn--primary justify-center w-full py-3.5" disabled={loading}>
               {loading ? 'Creating account…' : 'Create Account'}
             </button>

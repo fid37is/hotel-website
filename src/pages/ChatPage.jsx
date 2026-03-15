@@ -113,7 +113,7 @@ function DeptList({ departments, conversations, messages, activeConvId, onSelect
       <div className="px-4 py-4 border-b border-border shrink-0">
         <p className="text-xs font-bold uppercase tracking-widest text-muted">Departments</p>
         <p className="text-xs text-muted mt-1">
-          Room {reservation.rooms?.room_number || reservation.room_number || '—'}
+          Room {reservation.rooms?.number || reservation.room_number || reservation.room_no || '—'}
         </p>
       </div>
       <div className="flex-1 overflow-y-auto py-2 px-2">
@@ -464,7 +464,7 @@ export default function ChatPage() {
   }, [authLoading, isLoggedIn]);
 
   if (authLoading || loading) return (
-    <div className="fixed inset-0 bg-bg flex items-center justify-center" style={{ paddingTop: 'var(--h-nav, 64px)' }}>
+    <div className="bg-bg flex items-center justify-center" style={{ paddingTop: 'calc(var(--nav-h, 72px) + 38px)', minHeight: '100vh' }}>
       <div className="animate-pulse w-full max-w-4xl mx-4 rounded-lg border border-border overflow-hidden flex" style={{ height: 520 }}>
         <div className="bg-border/30 hidden md:block" style={{ width: 240 }} />
         <div className="flex-1 bg-border/20" />
@@ -473,7 +473,7 @@ export default function ChatPage() {
   );
 
   if (error) return (
-    <div className="fixed inset-0 bg-bg flex items-center justify-center px-4" style={{ paddingTop: 'var(--h-nav, 64px)' }}>
+    <div className="bg-bg flex items-center justify-center px-4" style={{ paddingTop: 'calc(var(--nav-h, 72px) + 38px)', minHeight: '100vh' }}>
       <div className="text-center max-w-sm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" className="mx-auto mb-4 text-muted opacity-40">
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
@@ -486,11 +486,21 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="fixed inset-0 bg-bg flex flex-col" style={{ paddingTop: 'var(--h-nav, 64px)' }}>
+    <div className="bg-bg flex flex-col" style={{ paddingTop: 'calc(var(--nav-h, 72px) + 38px)', height: '100vh', overflow: 'hidden' }}>
       <div className="flex-1 flex flex-col overflow-hidden md:p-4">
         <div className="flex-1 flex flex-col overflow-hidden w-full max-w-4xl mx-auto
           bg-surface border-t md:border border-border md:rounded-lg">
           <ChatProvider guestToken={token}>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0 bg-surface">
+              <p className="text-sm font-semibold text-primary">Messages</p>
+              <button onClick={() => navigate(-1)}
+                className="text-xs text-muted hover:text-primary transition-colors flex items-center gap-1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                Back
+              </button>
+            </div>
             <ChatInner reservation={reservation} guestId={guest?.id} />
           </ChatProvider>
         </div>
