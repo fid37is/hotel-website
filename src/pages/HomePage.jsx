@@ -1,14 +1,9 @@
 // src/pages/HomePage.jsx
-//
-// Renders the home page by composing standalone section components in the
-// order defined by hotelConfig.layout.section_order.
-// Each section reads its own copy from hotelConfig.content.<section_id>.
-
-import { useState }          from 'react';
-import { useNavigate }       from 'react-router-dom';
-import { useHotelConfig }    from '../hooks/useHotelConfig.jsx';
-import { DEFAULT_LAYOUT }    from '../config/theme.js';
-import useSEO                from '../hooks/useSEO.js';
+import { useState }         from 'react';
+import { useNavigate }      from 'react-router-dom';
+import { useHotelConfig }   from '../hooks/useHotelConfig.jsx';
+import { DEFAULT_LAYOUT }   from '../config/theme.js';
+import useSEO               from '../hooks/useSEO.js';
 
 import HeroSection      from '../components/sections/HeroSection.jsx';
 import AmenitiesSection from '../components/sections/AmenitiesSection.jsx';
@@ -36,10 +31,10 @@ export default function HomePage() {
     navigate('/book' + (p.toString() ? '?' + p.toString() : ''));
   };
 
-  const layout        = hotelConfig.layout || DEFAULT_LAYOUT;
-  const sectionOrder  = layout.section_order || DEFAULT_LAYOUT.section_order;
-  const hidden        = layout.section_hidden || [];
-  const visible       = id => !hidden.includes(id);
+  const layout       = hotelConfig.layout || DEFAULT_LAYOUT;
+  const sectionOrder = layout.section_order  || DEFAULT_LAYOUT.section_order;
+  const hidden       = layout.section_hidden || [];
+  const visible      = id => !hidden.includes(id);
 
   const SECTIONS = {
     hero:        () => (
@@ -54,15 +49,13 @@ export default function HomePage() {
       </div>
     ),
     booking_bar: () => null,
-    rooms:       () => <RoomsSection   key="rooms"    />,
-    why_stay:    () => <WhyStaySection key="why_stay" />,
-    story:       () => <StorySection   key="story"    />,
-    offers:      () => <OffersSection  key="offers"   />,
-    events:      () => <EventsSection  key="events"   />,
-    reviews:     () => <ReviewsSection key="reviews"  />,
-    cta:         () => <CtaSection      key="cta"       />,
-    custom_1:    () => <CustomSection1   key="custom_1"  />,
-    custom_2:    () => <CustomSection2   key="custom_2"  />,
+    rooms:    () => <RoomsSection    key="rooms"    />,
+    why_stay: () => <WhyStaySection  key="why_stay" />,
+    story:    () => <StorySection    key="story"    />,
+    offers:   () => <OffersSection   key="offers"   />,
+    events:   () => <EventsSection   key="events"   />,
+    reviews:  () => <ReviewsSection  key="reviews"  />,
+    cta:      () => <CtaSection      key="cta"      />,
   };
 
   return (
@@ -70,7 +63,6 @@ export default function HomePage() {
       <style>{`
         @keyframes pulse { 0%,100%{opacity:0.45} 50%{opacity:0.7} }
         *::-webkit-scrollbar { display:none }
-
         @media(max-width:900px){
           .rooms-grid    { grid-template-columns:repeat(2,1fr) !important; }
           .services-grid { grid-template-columns:repeat(2,1fr) !important; }

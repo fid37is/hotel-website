@@ -1,39 +1,51 @@
 // src/components/sections/StorySection.jsx
-// "Our Story" — 55/45 split: text + feature links left, full-height image right.
-// Copy editable via hotelConfig.content.story.
-
 import { Link, useNavigate } from 'react-router-dom';
-import { useHotelConfig } from '../../hooks/useHotelConfig.jsx';
+import { useHotelConfig }    from '../../hooks/useHotelConfig.jsx';
+import { useEditMode }       from '../../hooks/useEditMode.jsx';
+import EditBar               from './EditBar.jsx';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=1400&q=85&auto=format&fit=crop';
-const BODY_STYLE = { fontSize: 13, lineHeight: 1.9, color: 'var(--text-sub)', margin: 0, fontFamily: 'var(--font-body)' };
+const BODY_STYLE   = { fontSize: 13, lineHeight: 1.9, color: 'var(--text-sub)', margin: 0, fontFamily: 'var(--font-body)' };
 
 export default function StorySection() {
   const hotelConfig = useHotelConfig();
   const navigate    = useNavigate();
-  const content = hotelConfig.content?.story || {};
+  const edit        = useEditMode();
 
-  const eyebrow    = content.eyebrow    || 'Our Story';
-  const headline   = content.headline   || 'Designed for those';
-  const headlineSub = content.headlineSub || 'who expect more';
-  const body       = content.body       || hotelConfig.description || 'A modern luxury hotel offering world-class hospitality.';
-  const ctaLabel   = content.ctaLabel   || 'Explore the Hotel';
-  const image      = content.image      || hotelConfig.storyImageUrl || FALLBACK_IMG;
+  const sectionId = 'story';
+  const isActive  = edit?.isEditMode && edit?.activeSection === sectionId;
+  const saved     = hotelConfig.content?.[sectionId] || {};
+  const c         = edit?.isEditMode ? { ...saved, ...edit.content?.[sectionId] } : saved;
 
-  const links = content.links || [
+  const eyebrow     = c.eyebrow     || 'Our Story';
+  const headline    = c.headline    || 'Designed for those';
+  const headlineSub = c.headlineSub || 'who expect more';
+  const body        = c.body        || hotelConfig.description || 'A modern luxury hotel offering world-class hospitality.';
+  const ctaLabel    = c.ctaLabel    || 'Explore the Hotel';
+  const image       = c.image       || hotelConfig.storyImageUrl || FALLBACK_IMG;
+  const links       = c.links       || [
     { label: 'Dining',    sub: 'West African cuisine, signature cocktails, and rooftop evenings.', to: '/dining'    },
-    { label: 'Wellness',  sub: 'Spa treatments, pool, and rituals designed to restore.',            to: '/wellness'  },
-    { label: 'Concierge', sub: 'Private transfers, city tours, tailored itineraries.',              to: '/concierge' },
+    { label: 'Wellness',  sub: 'Spa treatments, pool, and rituals designed to restore.',           to: '/wellness'  },
+    { label: 'Concierge', sub: 'Private transfers, city tours, tailored itineraries.',             to: '/concierge' },
   ];
 
   return (
-    <section className="story-grid" style={{ display: 'grid', gridTemplateColumns: '55% 45%', background: 'var(--bg-page)', minHeight: 600 }}>
+    <section id="story" data-section="story" className="story-grid" style={{ position: 'relative', display: 'grid', gridTemplateColumns: '55% 45%', background: 'var(--bg-page)', minHeight: 600 }}>
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(4rem,8vw,7rem) clamp(3rem,5vw,5rem)' }}>
-        <p style={{ fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontFamily: 'var(--font-body)', fontWeight: 500, margin: '0 0 16px', color: 'var(--accent)' }}>{eyebrow}</p>
+
+        {isActive
+          ? <input value={c.eyebrow ?? ''} onChange={e => edit.setField(sectionId, 'eyebrow', e.target.value)} style={{ ...FIELD, fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 16, display: 'block' }} />
+          : <p style={{ fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontFamily: 'var(--font-body)', fontWeight: 500, margin: '0 0 16px', color: 'var(--accent)' }}>{eyebrow}</p>}
+
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem,3.5vw,3.2rem)', fontWeight: 300, lineHeight: 1.1, color: 'var(--text-base)', margin: '0 0 1.5rem' }}>
-          {headline}<br /><em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{headlineSub}</em>
+          {isActive
+            ? <><input value={c.headline ?? ''} onChange={e => edit.setField(sectionId, 'headline', e.target.value)} style={{ ...FIELD, display: 'block', marginBottom: 8 }} /><input value={c.headlineSub ?? ''} onChange={e => edit.setField(sectionId, 'headlineSub', e.target.value)} style={{ ...FIELD, display: 'block', fontStyle: 'italic' }} /></>
+            : <>{headline}<br /><em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{headlineSub}</em></>}
         </h2>
-        <p style={{ ...BODY_STYLE, maxWidth: 460, marginBottom: 36 }}>{body}</p>
+
+        {isActive
+          ? <textarea value={c.body ?? ''} onChange={e => edit.setField(sectionId, 'body', e.target.value)} rows={4} style={{ ...FIELD, ...BODY_STYLE, maxWidth: 460, marginBottom: 36, resize: 'vertical' }} />
+          : <p style={{ ...BODY_STYLE, maxWidth: 460, marginBottom: 36 }}>{body}</p>}
 
         <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: 28 }}>
           {links.map(({ label, sub, to }) => (
@@ -46,9 +58,8 @@ export default function StorySection() {
             </Link>
           ))}
         </div>
-
         <div style={{ marginTop: 36 }}>
-          <Link to="/explore" style={{ display: 'inline-flex', alignItems: 'center', padding: '14px 32px', borderRadius: 0, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-body)', fontWeight: 500, textDecoration: 'none', background: 'var(--brand)', color: 'var(--text-on-brand, #fff)', border: 'none', transition: 'opacity 0.2s' }}
+          <Link to="/explore" style={{ display: 'inline-flex', alignItems: 'center', padding: '14px 32px', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-body)', fontWeight: 500, textDecoration: 'none', background: 'var(--brand)', color: 'var(--text-on-brand,#fff)', border: 'none', transition: 'opacity 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
             {ctaLabel}
@@ -61,6 +72,10 @@ export default function StorySection() {
           onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
           onMouseLeave={e => e.currentTarget.style.transform = 'none'} />
       </div>
+
+      {edit?.isEditMode && <EditBar sectionId={sectionId} label="Our Story" isActive={isActive} onEdit={() => edit.activateSection(sectionId)} onDone={() => edit.deactivateSection()} />}
     </section>
   );
 }
+
+const FIELD = { width: '100%', boxSizing: 'border-box', background: 'rgba(99,102,241,0.07)', border: '1.5px dashed rgba(99,102,241,0.6)', borderRadius: 4, padding: '4px 8px', fontFamily: 'inherit', outline: 'none', color: 'inherit', cursor: 'text', margin: 0 };

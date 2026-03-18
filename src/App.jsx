@@ -6,6 +6,7 @@ import { GuestNotificationsProvider }   from './hooks/useGuestNotifications.jsx'
 import { BookingProvider }              from './hooks/useBooking.jsx';
 import { useGuestAuth }                 from './hooks/useGuestAuth.jsx';
 import ErrorBoundary                    from './components/layout/ErrorBoundary.jsx';
+import { EditModeProvider }             from './hooks/useEditMode.jsx';
 import ProtectedRoute                   from './components/layout/ProtectedRoute.jsx';
 import Layout                           from './components/layout/Layout.jsx';
 
@@ -47,7 +48,8 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <HotelConfigProvider>
-          <GuestAuthProvider>
+          <EditModeProvider>
+            <GuestAuthProvider>
             <GuestAuthNotificationsWrapper>
               <BookingProvider>
                 <Routes>
@@ -93,6 +95,7 @@ export default function App() {
               </BookingProvider>
             </GuestAuthNotificationsWrapper>
           </GuestAuthProvider>
+          </EditModeProvider>
         </HotelConfigProvider>
       </BrowserRouter>
     </ErrorBoundary>
