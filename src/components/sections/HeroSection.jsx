@@ -16,7 +16,7 @@ export default function HeroSection({ checkin, setCheckin, checkout, setCheckout
   const HEADER_H = 'calc(var(--nav-h, 72px) + 38px)';
 
   return (
-    <section style={{
+    <section id="hero" data-section="hero" style={{
       position: 'relative',
       marginTop: `calc(${HEADER_H} * -1)`,
       height: `calc(100vh + ${HEADER_H})`,

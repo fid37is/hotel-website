@@ -9,159 +9,154 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1/public', '') || 'http://localhost:5000';
+// Use a dedicated env var for the socket URL so it's explicit and never relies
+// on string-manipulation of the API URL.
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_BASE_URL?.replace('/api/v1/public', '') ||
+  'http://localhost:5000';
+
 const STORAGE_KEY = 'guest_notifications';
 
 const GuestNotificationsContext = createContext(null);
 
 const loadStored = () => {
-    try {
-        return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]');
-    } catch { return []; }
+  try {
+    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]');
+  } catch { return []; }
 };
 
 const saveStored = (items) => {
-    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 50))); } catch { }
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 50))); } catch { }
 };
 
 export function GuestNotificationsProvider({ children, guestToken }) {
-    const [notifications, setNotifications] = useState(loadStored);
-    const [connected, setConnected] = useState(false);
-    const socketRef = useRef(null);
+  const [notifications, setNotifications] = useState(loadStored);
+  const [connected, setConnected] = useState(false);
+  const socketRef = useRef(null);
 
-    const addNotification = useCallback((n) => {
-        setNotifications(prev => {
-            if (prev.find(p => p.id === n.id)) return prev;
-            const next = [n, ...prev].slice(0, 50);
-            saveStored(next);
-            return next;
-        });
-    }, []);
+  const addNotification = useCallback((n) => {
+    setNotifications(prev => {
+      if (prev.find(p => p.id === n.id)) return prev;
+      const next = [n, ...prev].slice(0, 50);
+      saveStored(next);
+      return next;
+    });
+  }, []);
 
-    // ── Connect socket when guest is logged in ──────────────────────────────
-    useEffect(() => {
-        if (!guestToken) {
-            socketRef.current?.disconnect();
-            socketRef.current = null;
-            return;
-        }
+  // ── Connect socket when guest is logged in ──────────────────────────────
+  useEffect(() => {
+    if (!guestToken) {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      setConnected(false);
+      return;
+    }
 
-        console.log('[socket] attempting connect to:', SOCKET_URL);
+    const s = io(SOCKET_URL, {
+      auth: { token: guestToken },
+      transports: ['websocket'],
+      reconnectionDelay: 2000,
+    });
 
-        const s = io(SOCKET_URL, {
-            auth: { token: guestToken },
-            transports: ['websocket'],
-            reconnectionDelay: 2000,
-        });
+    s.on('connect',    () => setConnected(true));
+    s.on('disconnect', () => setConnected(false));
+    // connect_error is intentionally silent in production; the bell simply
+    // shows as disconnected rather than spamming the console.
+    if (import.meta.env.DEV) {
+      s.on('connect_error', (err) => console.warn('[socket] connect_error:', err.message));
+      s.onAny((event, ...args) => console.debug('[socket]', event, args));
+    }
 
-        s.on('connect', () => {
-            setConnected(true);
-            console.log('[socket] connected, id:', s.id);
-        });
+    // ── Chat: new message from staff ──────────────────────────────────────
+    s.on('new_chat_message', ({ conversationId, senderName, deptName, preview }) => {
+      addNotification({
+        id: `msg-${conversationId}-${Date.now()}`,
+        type: 'chat',
+        title: `New message from ${senderName || deptName || 'Hotel Team'}`,
+        body: preview || '',
+        link: '/chat',
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    });
 
-        s.on('connect_error', (err) => {
-            console.error('[socket] connect_error:', err.message);
-        });
+    // ── Reservation update from HMS ───────────────────────────────────────
+    s.on('reservation_updated', ({ reservation, event }) => {
+      const messages = {
+        checked_in:  { title: "You're checked in!",     body: `Welcome — Room ${reservation.rooms?.number || reservation.room_number || ''} is ready.` },
+        checked_out: { title: 'Check-out complete',     body: 'Thank you for your stay. We hope to see you again.' },
+        cancelled:   { title: 'Reservation cancelled',  body: `Booking ${reservation.reservation_no} has been cancelled.` },
+        confirmed:   { title: 'Booking confirmed',      body: `Your reservation ${reservation.reservation_no} is confirmed.` },
+      };
+      const m = messages[event] || { title: 'Reservation update', body: `Your booking ${reservation.reservation_no || ''} has been updated.` };
+      addNotification({
+        id: `res-${reservation.id}-${event}-${Date.now()}`,
+        type: 'reservation',
+        title: m.title,
+        body: m.body,
+        link: '/account',
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    });
 
-        s.on('disconnect', (reason) => {
-            setConnected(false);
-            console.log('[socket] disconnected:', reason);
-        });
+    // ── Generic guest notification from HMS ───────────────────────────────
+    s.on('guest_notification', (payload) => {
+      addNotification({
+        id: payload.id || `notif-${Date.now()}`,
+        type: payload.type || 'info',
+        title: payload.title || 'Notification',
+        body: payload.body || '',
+        link: payload.link || null,
+        read: false,
+        createdAt: payload.createdAt || new Date().toISOString(),
+      });
+    });
 
-        // Log every incoming event for debugging
-        s.onAny((event, ...args) => {
-            console.log('[socket] event received:', event, args);
-        });
+    socketRef.current = s;
+    return () => { s.disconnect(); socketRef.current = null; };
+  }, [guestToken, addNotification]);
 
-        // ── Chat: new message from staff ──────────────────────────────────────
-        s.on('new_chat_message', ({ conversationId, senderName, deptName, preview }) => {
-            addNotification({
-                id: `msg-${conversationId}-${Date.now()}`,
-                type: 'chat',
-                title: `New message from ${senderName || deptName || 'Hotel Team'}`,
-                body: preview || '',
-                link: '/chat',
-                read: false,
-                createdAt: new Date().toISOString(),
-            });
-        });
+  const unreadCount = notifications.filter(n => !n.read).length;
 
-        // ── Reservation update from HMS ───────────────────────────────────────
-        s.on('reservation_updated', ({ reservation, event }) => {
-            const messages = {
-                checked_in: { title: 'You\'re checked in!', body: `Welcome — Room ${reservation.rooms?.number || reservation.room_number || ''} is ready.` },
-                checked_out: { title: 'Check-out complete', body: 'Thank you for your stay. We hope to see you again.' },
-                cancelled: { title: 'Reservation cancelled', body: `Booking ${reservation.reservation_no} has been cancelled.` },
-                confirmed: { title: 'Booking confirmed', body: `Your reservation ${reservation.reservation_no} is confirmed.` },
-            };
-            const m = messages[event] || { title: 'Reservation update', body: `Your booking ${reservation.reservation_no || ''} has been updated.` };
-            addNotification({
-                id: `res-${reservation.id}-${event}-${Date.now()}`,
-                type: 'reservation',
-                title: m.title,
-                body: m.body,
-                link: '/account',
-                read: false,
-                createdAt: new Date().toISOString(),
-            });
-        });
+  const markRead = useCallback((id) => {
+    setNotifications(prev => {
+      const next = prev.map(n => n.id === id ? { ...n, read: true } : n);
+      saveStored(next);
+      return next;
+    });
+  }, []);
 
-        // ── Generic guest notification from HMS ───────────────────────────────
-        s.on('guest_notification', (payload) => {
-            addNotification({
-                id: payload.id || `notif-${Date.now()}`,
-                type: payload.type || 'info',
-                title: payload.title || 'Notification',
-                body: payload.body || '',
-                link: payload.link || null,
-                read: false,
-                createdAt: payload.createdAt || new Date().toISOString(),
-            });
-        });
+  const markAllRead = useCallback(() => {
+    setNotifications(prev => {
+      const next = prev.map(n => ({ ...n, read: true }));
+      saveStored(next);
+      return next;
+    });
+  }, []);
 
-        socketRef.current = s;
-        return () => { s.disconnect(); socketRef.current = null; };
-    }, [guestToken, addNotification]);
+  const clearAll = useCallback(() => {
+    setNotifications([]);
+    saveStored([]);
+  }, []);
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+  const joinConversation = useCallback((conversationId) => {
+    socketRef.current?.emit('join_conversation', { conversationId });
+  }, []);
 
-    const markRead = useCallback((id) => {
-        setNotifications(prev => {
-            const next = prev.map(n => n.id === id ? { ...n, read: true } : n);
-            saveStored(next);
-            return next;
-        });
-    }, []);
-
-    const markAllRead = useCallback(() => {
-        setNotifications(prev => {
-            const next = prev.map(n => ({ ...n, read: true }));
-            saveStored(next);
-            return next;
-        });
-    }, []);
-
-    const clearAll = useCallback(() => {
-        setNotifications([]);
-        saveStored([]);
-    }, []);
-
-    const joinConversation = useCallback((conversationId) => {
-        socketRef.current?.emit('join_conversation', { conversationId });
-    }, []);
-
-    return (
-        <GuestNotificationsContext.Provider value={{
-            notifications, unreadCount, connected,
-            markRead, markAllRead, clearAll, joinConversation,
-        }}>
-            {children}
-        </GuestNotificationsContext.Provider>
-    );
+  return (
+    <GuestNotificationsContext.Provider value={{
+      notifications, unreadCount, connected,
+      markRead, markAllRead, clearAll, joinConversation,
+    }}>
+      {children}
+    </GuestNotificationsContext.Provider>
+  );
 }
 
 export const useGuestNotifications = () => {
-    const ctx = useContext(GuestNotificationsContext);
-    if (!ctx) throw new Error('useGuestNotifications must be used inside GuestNotificationsProvider');
-    return ctx;
+  const ctx = useContext(GuestNotificationsContext);
+  if (!ctx) throw new Error('useGuestNotifications must be used inside GuestNotificationsProvider');
+  return ctx;
 };

@@ -1,12 +1,9 @@
 // src/pages/ManageBookingPage.jsx — Pure Tailwind
 import { useState, useEffect } from 'react';
 import { useBooking }          from '../hooks/useBooking.jsx';
-import { reservationsApi, folioApi, guestAuthApi } from '../services/api.js';
+import { reservationsApi, guestAuthApi } from '../services/api.js';
+import { fmt }                 from '../utils/currency.js';
 import hotelConfig             from '../config/hotel.config.js';
-
-const fmt = (amt) => new Intl.NumberFormat('en-NG', {
-  style: 'currency', currency: hotelConfig.payment.currency, minimumFractionDigits: 0,
-}).format(amt);
 
 const STATUS_CLS = {
   confirmed:   'bg-green-100 text-green-700',
@@ -28,7 +25,6 @@ export default function ManageBookingPage() {
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState('');
   const [reservation,  setReservation]  = useState(state.confirmedReservation || null);
-  const [folio,        setFolio]        = useState(null);
   const [cancelling,   setCancelling]   = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelDone,   setCancelDone]   = useState(false);
@@ -36,16 +32,11 @@ export default function ManageBookingPage() {
 
   useEffect(() => {
     document.title = `Manage Booking | ${hotelConfig.shortName}`;
-    if (reservation && token) {
-      folioApi.getByReservation(reservation.id, token)
-        .then(r => setFolio(r.data))
-        .catch(() => {});
-    }
   }, []);
 
   const handleLookup = async (e) => {
     e.preventDefault();
-    setError(''); setReservation(null); setFolio(null); setLoading(true);
+    setError(''); setReservation(null); setLoading(true);
 
     try {
       if (!refInput.trim() || !email.trim()) {
@@ -57,7 +48,6 @@ export default function ManageBookingPage() {
       if (token && state.confirmedReservation) {
         const r = await reservationsApi.getById(state.confirmedReservation.id, token);
         setReservation(r.data);
-        folioApi.getByReservation(r.data.id, token).then(fr => setFolio(fr.data)).catch(() => {});
         return;
       }
 
@@ -69,10 +59,6 @@ export default function ManageBookingPage() {
 
       setReservation(result.data.reservation);
       setToken(result.data.token);
-
-      folioApi.getByReservation(result.data.reservation.id, result.data.token)
-        .then(fr => setFolio(fr.data))
-        .catch(() => {});
 
     } catch (err) {
       setError(err.message || 'Booking not found. Please check your reference number and email.');
@@ -103,7 +89,7 @@ export default function ManageBookingPage() {
         <div className="mb-10">
           <p className="section-label">Guest Services</p>
           <h1 className="section-title mb-2">Manage My Booking</h1>
-          <p className="text-muted text-sm">View your reservation details, folio, or cancel your booking.</p>
+          <p className="text-muted text-sm">View your reservation details or cancel your booking.</p>
         </div>
 
         {!reservation && (
@@ -151,49 +137,30 @@ export default function ManageBookingPage() {
                 </span>
               </div>
               <button className="btn btn--outline text-xs" onClick={() => {
-                setReservation(null); setFolio(null); setToken('');
+                setReservation(null); setToken('');
                 setRefInput(''); setEmail(''); setError('');
               }}>
                 Look up another
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-xs font-medium tracking-widest uppercase text-muted mb-3">Stay Details</h3>
-                {[
-                  ['Room',      reservation.room_type?.name || reservation.room_types?.name || 'Room'],
-                  ['Check-in',  reservation.check_in_date  || reservation.check_in],
-                  ['Check-out', reservation.check_out_date || reservation.check_out],
-                  ['Guests',    `${reservation.adults || 1} adult${(reservation.adults || 1) !== 1 ? 's' : ''}${reservation.children > 0 ? `, ${reservation.children} child${reservation.children !== 1 ? 'ren' : ''}` : ''}`],
-                ].map(([label, val]) => (
-                  <div key={label} className="flex justify-between text-sm py-2 border-b border-border">
-                    <span className="text-muted">{label}</span>
-                    <strong>{val}</strong>
-                  </div>
-                ))}
-                {reservation.total_amount && (
-                  <div className="flex justify-between text-sm py-2 border-b border-border">
-                    <span className="text-muted">Total</span>
-                    <strong>{fmt(reservation.total_amount)}</strong>
-                  </div>
-                )}
-              </div>
-
-              {folio && (
-                <div>
-                  <h3 className="text-xs font-medium tracking-widest uppercase text-muted mb-3">Billing Summary</h3>
-                  {[
-                    ['Room charges',  folio.room_charges  || 0],
-                    ['Other charges', folio.other_charges || 0],
-                    ['Total paid',    folio.total_paid    || 0],
-                    ['Balance due',   folio.balance       || 0, true],
-                  ].map(([label, val, bold]) => (
-                    <div key={label} className={`flex justify-between text-sm py-2 border-b border-border ${bold ? 'font-medium' : ''}`}>
-                      <span className="text-muted">{label}</span>
-                      <strong className={bold ? 'text-secondary' : ''}>{fmt(val)}</strong>
-                    </div>
-                  ))}
+            <div>
+              <h3 className="text-xs font-medium tracking-widest uppercase text-muted mb-3">Stay Details</h3>
+              {[
+                ['Room',      reservation.room_type?.name || reservation.room_types?.name || 'Room'],
+                ['Check-in',  reservation.check_in_date  || reservation.check_in],
+                ['Check-out', reservation.check_out_date || reservation.check_out],
+                ['Guests',    `${reservation.adults || 1} adult${(reservation.adults || 1) !== 1 ? 's' : ''}${reservation.children > 0 ? `, ${reservation.children} child${reservation.children !== 1 ? 'ren' : ''}` : ''}`],
+              ].map(([label, val]) => (
+                <div key={label} className="flex justify-between text-sm py-2 border-b border-border">
+                  <span className="text-muted">{label}</span>
+                  <strong>{val}</strong>
+                </div>
+              ))}
+              {reservation.total_amount && (
+                <div className="flex justify-between text-sm py-2 border-b border-border">
+                  <span className="text-muted">Total</span>
+                  <strong>{fmt(reservation.total_amount)}</strong>
                 </div>
               )}
             </div>

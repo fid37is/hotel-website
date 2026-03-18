@@ -300,14 +300,30 @@ export const DEFAULT_LAYOUT = {
   hero_style:     'fullscreen',           // fullscreen | split | minimal
   card_style:     'portrait',             // portrait | wide | magazine
   font_pair:      'cormorant_dmsans',
-  section_order:  ['hero','booking_bar','intro','rooms','why_stay','story','offers','reviews','cta'],
+  section_order:  ['hero','booking_bar','rooms','why_stay','story','offers','events','reviews','cta'],
   section_hidden: [],
 };
 
 /** Merge a partial layout object from the API with defaults */
-export const parseLayout = (raw = {}) => ({
-  ...DEFAULT_LAYOUT,
-  ...raw,
-  section_order:  Array.isArray(raw.section_order)  ? raw.section_order  : DEFAULT_LAYOUT.section_order,
-  section_hidden: Array.isArray(raw.section_hidden) ? raw.section_hidden : DEFAULT_LAYOUT.section_hidden,
-});
+export const parseLayout = (raw = {}) => {
+  const base   = DEFAULT_LAYOUT.section_order;
+  const saved  = Array.isArray(raw.section_order) ? raw.section_order : base;
+
+  // Reconcile: keep admin order but insert any DEFAULT sections that are missing.
+  // This prevents stale cache from silently dropping newly-canonical sections.
+  const merged = [...saved];
+  base.forEach(id => {
+    if (!merged.includes(id)) {
+      const anchor   = base.slice(base.indexOf(id) + 1).find(s => merged.includes(s));
+      const insertAt = anchor ? merged.indexOf(anchor) : merged.length;
+      merged.splice(insertAt, 0, id);
+    }
+  });
+
+  return {
+    ...DEFAULT_LAYOUT,
+    ...raw,
+    section_order:  merged,
+    section_hidden: Array.isArray(raw.section_hidden) ? raw.section_hidden : DEFAULT_LAYOUT.section_hidden,
+  };
+};

@@ -9,6 +9,8 @@ const BASE_URL = hotelConfig.api.baseUrl;
 
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
 const request = async (method, path, { body, params, token } = {}) => {
+  // BASE_URL is always an absolute URL (http://... or https://...) so
+  // new URL() works without a base argument.
   const url = new URL(`${BASE_URL}${path}`);
 
   if (params) {
@@ -132,6 +134,17 @@ export const guestAuthApi = {
 
   cancelReservation: (id, reason, token) =>
     request('PATCH', `/reservations/${id}/cancel`, { body: { reason }, token }),
+
+
+  // Public booking lookup — no login required.
+  // Matches a reservation by reference number + email and returns a
+  // short-lived token scoped to that single reservation.
+  lookupBooking: ({ reservation_no, email }) =>
+    request('POST', '/reservations/lookup', { body: { reservation_no, email } }),
+
+  // Update the logged-in guest's own profile fields
+  updateMe: (payload, token) =>
+    request('PATCH', '/auth/me', { body: payload, token }),
 
   forgotPassword: (email) =>
     request('POST', '/auth/forgot-password', { body: { email } }),
