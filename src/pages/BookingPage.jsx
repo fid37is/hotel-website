@@ -5,13 +5,14 @@ import { useBooking }          from '../hooks/useBooking.jsx';
 import { useGuestAuth }        from '../hooks/useGuestAuth.jsx';
 import { useHotelConfig }      from '../hooks/useHotelConfig.jsx';
 import { roomsApi, reservationsApi } from '../services/api.js';
-import { fmt }                 from '../utils/currency.js';
+import { useFmt }              from '../utils/currency.js';
 
 const STEPS = ['Select Room', 'Your Details', 'Review & Pay'];
 const nights = (ci, co) => (!ci || !co) ? 0 : Math.max(0, Math.round((new Date(co) - new Date(ci)) / 86400000));
 
 export default function BookingPage() {
   const hotelConfig = useHotelConfig();
+  const fmt         = useFmt();
   const cancellationPolicy = hotelConfig.policies?.cancellation || '';
   const [policyExpanded, setPolicyExpanded] = useState(false);
   const { state, dispatch } = useBooking();
@@ -50,11 +51,14 @@ export default function BookingPage() {
   const [checkIn,     setCheckIn]     = useState(searchParams.get('checkIn')  || state.search.checkIn  || '');
   const [checkOut,    setCheckOut]    = useState(searchParams.get('checkOut') || state.search.checkOut || '');
   const [guestCount,  setGuestCount]  = useState(Number(searchParams.get('guests')) || state.search.guests || 1);
-  // Clear preselectedTypeId from search state after reading it (one-time use)
+  // Clear preselectedTypeId from search state after reading it (one-time use).
+  // We read the value at mount from state.search.preselectedTypeId (captured once),
+  // then dispatch only if it existed — no stale closure risk.
   useEffect(() => {
     if (state.search.preselectedTypeId) {
-      dispatch({ type: 'SET_SEARCH', payload: { ...state.search, preselectedTypeId: undefined } });
+      dispatch({ type: 'SET_SEARCH', payload: { preselectedTypeId: null } });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const numNights = nights(checkIn, checkOut);
 
@@ -65,16 +69,25 @@ export default function BookingPage() {
 
   // Payment methods available for this hotel (from live config)
   const availablePaymentMethods = [
-    hotelConfig.payment?.payOnArrival      !== false && { id: 'on_arrival',    label: 'Pay on Arrival',       sub: 'Pay at the front desk when you check in. No charge now.' },
-    hotelConfig.payment?.bankTransfer                && { id: 'bank_transfer',  label: 'Bank Transfer',        sub: 'Transfer payment to our bank account before your arrival.' },
-    hotelConfig.payment?.paystackEnabled             && { id: 'paystack',       label: 'Pay Now by Card',      sub: 'Secure online payment via Paystack. Charged immediately.' },
+    hotelConfig.payment?.payOnArrival !== false && { id: 'on_arrival',    label: 'Pay on Arrival',       sub: 'Pay at the front desk when you check in. No charge now.' },
+    hotelConfig.payment?.bankTransfer              && { id: 'bank_transfer',  label: 'Bank Transfer',        sub: 'Transfer payment to our bank account before your arrival.' },
+    hotelConfig.payment?.paystackEnabled           && { id: 'paystack',       label: 'Pay Now by Card',      sub: 'Secure online payment via Paystack. Charged immediately.' },
   ].filter(Boolean);
+
+  // If no methods are configured at all, default to pay-on-arrival so booking never gets stuck.
+  const effectiveMethods = availablePaymentMethods.length > 0
+    ? availablePaymentMethods
+    : [{ id: 'on_arrival', label: 'Pay on Arrival', sub: 'Pay at the front desk when you check in. No charge now.' }];
 
   // If rate requires prepayment, exclude pay-on-arrival
   const prepaymentRequired = selectedRate?.prepayment_required ?? false;
   const paymentOptions = prepaymentRequired
-    ? availablePaymentMethods.filter(m => m.id !== 'on_arrival')
-    : availablePaymentMethods;
+    ? effectiveMethods.filter(m => m.id !== 'on_arrival')
+    : effectiveMethods;
+
+  // If prepayment is required but no non-arrival methods exist, show all methods
+  // so the form is never locked (edge case: misconfigured hotel).
+  const finalPaymentOptions = paymentOptions.length > 0 ? paymentOptions : effectiveMethods;
   const ratePerNight = selectedRate?.base_rate ?? selectedRate?.rate ?? selectedType?.base_rate ?? 0;
   const totalAmount  = ratePerNight * numNights;
 
@@ -394,27 +407,21 @@ export default function BookingPage() {
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
                       Payment Method
                     </p>
-                    {paymentOptions.length === 0 ? (
-                      <p className="text-xs text-muted">
-                        Contact the hotel directly to arrange payment.
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {paymentOptions.map(opt => (
-                          <label key={opt.id}
-                            className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
-                              ${paymentMethod === opt.id ? 'border-secondary bg-secondary/5' : 'border-border hover:border-secondary/40'}`}>
-                            <input type="radio" name="payment" className="mt-0.5 accent-secondary"
-                              checked={paymentMethod === opt.id}
-                              onChange={() => setPaymentMethod(opt.id)} />
-                            <div>
-                              <p className="text-sm font-medium">{opt.label}</p>
-                              <p className="text-xs text-muted mt-0.5">{opt.sub}</p>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex flex-col gap-2">
+                      {finalPaymentOptions.map(opt => (
+                        <label key={opt.id}
+                          className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
+                            ${paymentMethod === opt.id ? 'border-secondary bg-secondary/5' : 'border-border hover:border-secondary/40'}`}>
+                          <input type="radio" name="payment" className="mt-0.5 accent-secondary"
+                            checked={paymentMethod === opt.id}
+                            onChange={() => setPaymentMethod(opt.id)} />
+                          <div>
+                            <p className="text-sm font-medium">{opt.label}</p>
+                            <p className="text-xs text-muted mt-0.5">{opt.sub}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
 
                     {/* Bank details shown inline when bank transfer selected */}
                     {paymentMethod === 'bank_transfer' && hotelConfig.payment?.bankName && (
@@ -448,7 +455,7 @@ export default function BookingPage() {
                       </div>
                     )}
 
-                    {prepaymentRequired && paymentOptions.length > 0 && (
+                    {prepaymentRequired && finalPaymentOptions.length > 0 && (
                       <p className="text-xs text-muted mt-3 leading-relaxed">
                         ⚠ This rate plan requires payment before or at the time of booking.
                       </p>

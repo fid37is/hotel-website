@@ -1,21 +1,28 @@
 // src/components/sections/StorySection.jsx
-import { Link, useNavigate } from 'react-router-dom';
-import { useHotelConfig }    from '../../hooks/useHotelConfig.jsx';
-import { useEditMode }       from '../../hooks/useEditMode.jsx';
-import EditBar               from './EditBar.jsx';
+import { Link }          from 'react-router-dom';
+import { useHotelConfig } from '../../hooks/useHotelConfig.jsx';
+import { useEditMode }    from '../../hooks/useEditMode.jsx';
+import EditBar            from './EditBar.jsx';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=1400&q=85&auto=format&fit=crop';
 const BODY_STYLE   = { fontSize: 13, lineHeight: 1.9, color: 'var(--text-sub)', margin: 0, fontFamily: 'var(--font-body)' };
 
+const DEFAULT_LINKS = [
+  { label: 'Dining',    sub: 'West African cuisine, signature cocktails, and rooftop evenings.', to: '/dining'    },
+  { label: 'Wellness',  sub: 'Spa treatments, pool, and rituals designed to restore.',           to: '/wellness'  },
+  { label: 'Concierge', sub: 'Private transfers, city tours, tailored itineraries.',             to: '/concierge' },
+];
+
 export default function StorySection() {
   const hotelConfig = useHotelConfig();
-  const navigate    = useNavigate();
   const edit        = useEditMode();
 
   const sectionId = 'story';
   const isActive  = edit?.isEditMode && edit?.activeSection === sectionId;
   const saved     = hotelConfig.content?.[sectionId] || {};
-  const c         = edit?.isEditMode ? { ...saved, ...edit.content?.[sectionId] } : saved;
+  // In edit mode, getContent() merges saved API content with live edits —
+  // this keeps edits visible even after clicking Done (not just while isActive).
+  const c         = edit?.getContent ? edit.getContent(sectionId, saved) : saved;
 
   const eyebrow     = c.eyebrow     || 'Our Story';
   const headline    = c.headline    || 'Designed for those';
@@ -23,11 +30,13 @@ export default function StorySection() {
   const body        = c.body        || hotelConfig.description || 'A modern luxury hotel offering world-class hospitality.';
   const ctaLabel    = c.ctaLabel    || 'Explore the Hotel';
   const image       = c.image       || hotelConfig.storyImageUrl || FALLBACK_IMG;
-  const links       = c.links       || [
-    { label: 'Dining',    sub: 'West African cuisine, signature cocktails, and rooftop evenings.', to: '/dining'    },
-    { label: 'Wellness',  sub: 'Spa treatments, pool, and rituals designed to restore.',           to: '/wellness'  },
-    { label: 'Concierge', sub: 'Private transfers, city tours, tailored itineraries.',             to: '/concierge' },
-  ];
+  const links       = c.links       || DEFAULT_LINKS;
+
+  // Helper: update a single field inside the links array
+  const setLinkField = (i, key, val) => {
+    const updated = links.map((l, idx) => idx === i ? { ...l, [key]: val } : l);
+    edit.setField(sectionId, 'links', updated);
+  };
 
   return (
     <section id="story" data-section="story" className="story-grid" style={{ position: 'relative', display: 'grid', gridTemplateColumns: '55% 45%', background: 'var(--bg-page)', minHeight: 600 }}>
@@ -44,26 +53,67 @@ export default function StorySection() {
         </h2>
 
         {isActive
-          ? <textarea value={c.body ?? ''} onChange={e => edit.setField(sectionId, 'body', e.target.value)} rows={4} style={{ ...FIELD, ...BODY_STYLE, maxWidth: 460, marginBottom: 36, resize: 'vertical' }} />
+          ? <textarea value={c.body ?? ''} onChange={e => edit.setField(sectionId, 'body', e.target.value)} rows={5} style={{ ...FIELD, ...BODY_STYLE, maxWidth: 460, marginBottom: 36, resize: 'vertical' }} />
           : <p style={{ ...BODY_STYLE, maxWidth: 460, marginBottom: 36 }}>{body}</p>}
 
+        {/* Story links — editable label, subtitle, and destination */}
         <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: 28 }}>
-          {links.map(({ label, sub, to }) => (
-            <Link key={label} to={to || '/explore'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid var(--border-soft)', textDecoration: 'none' }}>
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)', margin: '0 0 3px', fontFamily: 'var(--font-body)' }}>{label}</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-body)' }}>{sub}</p>
+          {links.map(({ label, sub, to }, i) => (
+            isActive ? (
+              <div key={i} style={{ padding: '14px 0', borderBottom: '1px solid var(--border-soft)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 6, alignItems: 'center' }}>
+                  <input
+                    value={label}
+                    onChange={e => setLinkField(i, 'label', e.target.value)}
+                    placeholder="Label"
+                    style={{ ...FIELD, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)' }}
+                  />
+                  <input
+                    value={sub}
+                    onChange={e => setLinkField(i, 'sub', e.target.value)}
+                    placeholder="Description"
+                    style={{ ...FIELD, fontSize: 12, color: 'var(--text-muted)' }}
+                  />
+                  <input
+                    value={to}
+                    onChange={e => setLinkField(i, 'to', e.target.value)}
+                    placeholder="/path"
+                    style={{ ...FIELD, fontSize: 11, color: 'var(--text-muted)' }}
+                  />
+                </div>
               </div>
-              <span style={{ color: 'var(--text-muted)', fontSize: 16, flexShrink: 0, marginLeft: 20 }}>→</span>
-            </Link>
+            ) : (
+              <Link key={label} to={to || '/explore'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid var(--border-soft)', textDecoration: 'none' }}>
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)', margin: '0 0 3px', fontFamily: 'var(--font-body)' }}>{label}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-body)' }}>{sub}</p>
+                </div>
+                <span style={{ color: 'var(--text-muted)', fontSize: 16, flexShrink: 0, marginLeft: 20 }}>→</span>
+              </Link>
+            )
           ))}
         </div>
-        <div style={{ marginTop: 36 }}>
+
+        <div style={{ marginTop: 36, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Link to="/explore" style={{ display: 'inline-flex', alignItems: 'center', padding: '14px 32px', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-body)', fontWeight: 500, textDecoration: 'none', background: 'var(--brand)', color: 'var(--text-on-brand,#fff)', border: 'none', transition: 'opacity 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-            {ctaLabel}
+            {isActive
+              ? <input value={c.ctaLabel ?? ''} onChange={e => edit.setField(sectionId, 'ctaLabel', e.target.value)} onClick={ev => ev.stopPropagation()} style={{ ...FIELD, background: 'transparent', border: '1px dashed rgba(255,255,255,0.5)', color: 'inherit', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase' }} />
+              : ctaLabel}
           </Link>
+          {/* Image URL editor — only visible in edit mode */}
+          {isActive && (
+            <div style={{ marginTop: 8 }}>
+              <p style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: '0 0 6px' }}>Story Image URL</p>
+              <input
+                value={c.image ?? ''}
+                onChange={e => edit.setField(sectionId, 'image', e.target.value)}
+                placeholder={FALLBACK_IMG}
+                style={{ ...FIELD, fontSize: 11, color: 'var(--text-muted)' }}
+              />
+            </div>
+          )}
         </div>
       </div>
 

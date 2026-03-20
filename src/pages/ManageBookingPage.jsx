@@ -1,9 +1,9 @@
 // src/pages/ManageBookingPage.jsx — Pure Tailwind
 import { useState, useEffect } from 'react';
 import { useBooking }          from '../hooks/useBooking.jsx';
+import { useHotelConfig }      from '../hooks/useHotelConfig.jsx';
 import { reservationsApi, guestAuthApi } from '../services/api.js';
-import { fmt }                 from '../utils/currency.js';
-import hotelConfig             from '../config/hotel.config.js';
+import { useFmt }              from '../utils/currency.js';
 
 const STATUS_CLS = {
   confirmed:   'bg-green-100 text-green-700',
@@ -14,17 +14,24 @@ const STATUS_CLS = {
 };
 
 export default function ManageBookingPage() {
-  const { state } = useBooking();
+  const hotelConfig = useHotelConfig();
+  const fmt         = useFmt();
+  const { state }   = useBooking();
 
-  const prefillRef   = state.confirmedReservation?.reservation_no || state.confirmedReservation?.id || '';
+  // confirmation is set by BOOKING_CONFIRMED dispatch in BookingPage.
+  // Shape: { reservation, guestToken, paymentMethod }
+  const confirmedRes   = state.confirmation?.reservation || null;
+  const confirmedToken = state.confirmation?.guestToken  || '';
+
+  const prefillRef   = confirmedRes?.reservation_no || confirmedRes?.id || '';
   const prefillEmail = state.guestDetails?.email || '';
 
   const [refInput,     setRefInput]     = useState(prefillRef);
   const [email,        setEmail]        = useState(prefillEmail);
-  const [token,        setToken]        = useState(state.guestToken || '');
+  const [token,        setToken]        = useState(confirmedToken);
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState('');
-  const [reservation,  setReservation]  = useState(state.confirmedReservation || null);
+  const [reservation,  setReservation]  = useState(confirmedRes);
   const [cancelling,   setCancelling]   = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelDone,   setCancelDone]   = useState(false);
@@ -32,7 +39,7 @@ export default function ManageBookingPage() {
 
   useEffect(() => {
     document.title = `Manage Booking | ${hotelConfig.shortName}`;
-  }, []);
+  }, [hotelConfig.shortName]);
 
   const handleLookup = async (e) => {
     e.preventDefault();
@@ -45,8 +52,8 @@ export default function ManageBookingPage() {
       }
 
       // If coming straight from booking confirmation flow, token is already in state
-      if (token && state.confirmedReservation) {
-        const r = await reservationsApi.getById(state.confirmedReservation.id, token);
+      if (token && confirmedRes) {
+        const r = await reservationsApi.getById(confirmedRes.id, token);
         setReservation(r.data);
         return;
       }

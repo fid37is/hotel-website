@@ -1,17 +1,23 @@
-// hotel-website/src/pages/ConfirmationPage.jsx — Pure Tailwind
+// src/pages/ConfirmationPage.jsx — Pure Tailwind
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useBooking }     from '../hooks/useBooking.jsx';
 import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
-import { fmt }            from '../utils/currency.js';
+import { useFmt }         from '../utils/currency.js';
 
 const nights = (ci, co) => (!ci || !co) ? 0
   : Math.max(0, Math.round((new Date(co) - new Date(ci)) / 86400000));
+
+// Returns the human-readable booking reference.
+// API may return reservation_no (e.g. "RES-20260001") or fall back to UUID slice.
+const displayRef = (res) =>
+  res?.reservation_no || res?.confirmation_number || res?.id?.slice(0, 8).toUpperCase() || '—';
 
 export default function ConfirmationPage() {
   const navigate    = useNavigate();
   const { state, dispatch } = useBooking();
   const hotelConfig = useHotelConfig();
+  const fmt         = useFmt();
   const { confirmation, selectedRoom, selectedRate, search, guestDetails } = state;
 
   useEffect(() => {
@@ -59,7 +65,7 @@ export default function ConfirmationPage() {
           </p>
           {res.id && (
             <p className="mt-3 text-xs text-muted">
-              Booking reference: <strong className="font-mono text-primary">{res.id.slice(0, 8).toUpperCase()}</strong>
+              Booking reference: <strong className="font-mono text-primary">{displayRef(res)}</strong>
             </p>
           )}
         </div>
@@ -78,7 +84,7 @@ export default function ConfirmationPage() {
                 ['Account Number', hotelConfig.payment.bankAccountNumber],
                 ['Account Name',   hotelConfig.payment.bankAccountName],
                 ['Amount',         fmt(totalAmount)],
-                ['Reference',      `${guestDetails.lastName || ''} ${res.id?.slice(0,8).toUpperCase() || ''}`.trim()],
+                ['Reference',      `${guestDetails.lastName || ''} ${displayRef(res)}`.trim()],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm">
                   <span className="text-muted">{label}</span>
@@ -157,7 +163,7 @@ export default function ConfirmationPage() {
           {hotelConfig.contact?.whatsapp && (
             <a
               href={`https://wa.me/${hotelConfig.contact.whatsapp.replace(/\D/g,'')}?text=${encodeURIComponent(
-                `Hi, I just booked. Reference: ${res.id?.slice(0,8).toUpperCase()}. Check-in: ${res.check_in_date}.`
+                `Hi, I just booked. Reference: ${displayRef(res)}. Check-in: ${res.check_in_date}.`
               )}`}
               target="_blank" rel="noreferrer"
               className="btn btn--outline text-center">

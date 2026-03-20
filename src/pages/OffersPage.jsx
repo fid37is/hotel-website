@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
+import { useFmt }              from '../utils/currency.js';
 
 const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=900&q=80&auto=format&fit=crop',
@@ -14,8 +15,7 @@ export default function OffersPage() {
   const hotelConfig = useHotelConfig();
   const navigate = useNavigate();
   const accent = hotelConfig.brand?.secondary || hotelConfig.brand?.primary || 'var(--accent)';
-  const currency = hotelConfig.payment?.currency || 'NGN';
-  const fmt = n => new Intl.NumberFormat('en', { style: 'currency', currency, minimumFractionDigits: 0 }).format((n || 0) / 100);
+  const fmt       = useFmt();
 
   const offers = hotelConfig.offers || [
     {

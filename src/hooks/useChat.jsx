@@ -9,7 +9,10 @@ import { chatApi } from '../services/api.js';
 
 const ChatContext = createContext(null);
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1/public', '') || 'http://localhost:5000';
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_BASE_URL?.replace('/api/v1/public', '') ||
+  'http://localhost:5000';
 
 export function ChatProvider({ children, guestToken }) {
   const [socket,        setSocket]        = useState(null);

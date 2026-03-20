@@ -170,7 +170,23 @@ export function HotelConfigProvider({ children }) {
     };
 
     window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+
+    // Fallback: listen for the custom event dispatched by useEditMode
+    // when MessageEvent construction fails in certain environments.
+    const customHandler = (e) => {
+      if (e.detail) {
+        setConfig(prev => ({
+          ...prev,
+          content: { ...(prev.content || {}), ...e.detail },
+        }));
+      }
+    };
+    window.addEventListener('hms_content_update', customHandler);
+
+    return () => {
+      window.removeEventListener('message', handler);
+      window.removeEventListener('hms_content_update', customHandler);
+    };
   }, []);
 
   return (

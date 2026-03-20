@@ -10,7 +10,9 @@ export default function ReviewsSection() {
   const sectionId = 'reviews';
   const isActive  = edit?.isEditMode && edit?.activeSection === sectionId;
   const saved     = hotelConfig.content?.[sectionId] || {};
-  const c         = edit?.isEditMode ? { ...saved, ...edit.content?.[sectionId] } : saved;
+  // In edit mode, getContent() merges saved API content with live edits —
+  // this keeps edits visible even after clicking Done (not just while isActive).
+  const c         = edit?.getContent ? edit.getContent(sectionId, saved) : saved;
 
   const eyebrow      = c.eyebrow  || 'Guest Stories';
   const headline     = c.headline || 'What Our Guests Say';

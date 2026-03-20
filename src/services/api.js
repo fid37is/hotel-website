@@ -46,27 +46,42 @@ const request = async (method, path, { body, params, token } = {}) => {
 };
 
 // ─── Rooms ────────────────────────────────────────────────────────────────────
-// Module-level cache — getTypes() hits the network exactly once per session.
-// All subsequent calls (HomePage, RoomsPage, etc.) get the same resolved promise.
-let _roomTypesCache = null;
-let _roomsCache = null;
+// Module-level cache — getTypes() hits the network at most once per 5 minutes.
+// All calls within that window get the same resolved promise.
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let _roomTypesCache    = null;
+let _roomTypesCachedAt = 0;
+let _roomsCache        = null;
+let _roomsCachedAt     = 0;
+
+const isFresh = (cachedAt) => cachedAt > 0 && (Date.now() - cachedAt) < CACHE_TTL_MS;
 
 export const roomsApi = {
   getTypes: () => {
-    if (!_roomTypesCache) _roomTypesCache = request('GET', '/rooms/types');
+    if (!_roomTypesCache || !isFresh(_roomTypesCachedAt)) {
+      _roomTypesCache    = request('GET', '/rooms/types');
+      _roomTypesCachedAt = Date.now();
+    }
     return _roomTypesCache;
   },
 
   // All individual rooms (for browsing — no date filter)
   getAllRooms: ({ typeId } = {}) => {
     if (!typeId) {
-      if (!_roomsCache) _roomsCache = request('GET', '/rooms');
+      if (!_roomsCache || !isFresh(_roomsCachedAt)) {
+        _roomsCache    = request('GET', '/rooms');
+        _roomsCachedAt = Date.now();
+      }
       return _roomsCache;
     }
     return request('GET', '/rooms', { params: { type_id: typeId } });
   },
 
-  clearTypesCache: () => { _roomTypesCache = null; _roomsCache = null; },
+  clearTypesCache: () => {
+    _roomTypesCache = null; _roomTypesCachedAt = 0;
+    _roomsCache     = null; _roomsCachedAt     = 0;
+  },
 
   getTypeById: (id) =>
     request('GET', `/rooms/types/${id}`),

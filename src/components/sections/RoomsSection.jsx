@@ -5,6 +5,7 @@ import { useHotelConfig }      from '../../hooks/useHotelConfig.jsx';
 import { useEditMode }         from '../../hooks/useEditMode.jsx';
 import { roomsApi }            from '../../services/api.js';
 import EditBar                 from './EditBar.jsx';
+import { useFmt }              from '../../utils/currency.js';
 
 const FALLBACK_IMGS = [
   'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80&auto=format&fit=crop',
@@ -52,15 +53,16 @@ export default function RoomsSection() {
   const sectionId = 'rooms';
   const isActive  = edit?.isEditMode && edit?.activeSection === sectionId;
   const saved     = hotelConfig.content?.[sectionId] || {};
-  const c         = edit?.isEditMode ? { ...saved, ...edit.content?.[sectionId] } : saved;
+  // In edit mode, getContent() merges saved API content with live edits —
+  // this keeps edits visible even after clicking Done (not just while isActive).
+  const c         = edit?.getContent ? edit.getContent(sectionId, saved) : saved;
 
   const layout    = hotelConfig.layout || {};
   const cardStyle = layout.card_style || 'portrait';
   const cfg       = CARD_CONFIGS[cardStyle] || CARD_CONFIGS.portrait;
   const contact   = hotelConfig.contact || {};
   const cityLine  = [contact.city, contact.country].filter(Boolean).join(', ');
-  const currency  = hotelConfig.payment?.currency || 'NGN';
-  const fmt       = n => new Intl.NumberFormat('en', { style: 'currency', currency, minimumFractionDigits: 0 }).format((n || 0) / 100);
+  const fmt       = useFmt();
 
   const eyebrow  = c.eyebrow  || 'Accommodation';
   const headline = c.headline || 'Rooms & Suites';

@@ -1,8 +1,9 @@
 // src/components/ui/RoomCard.jsx — Pure Tailwind
 import { Link } from 'react-router-dom';
-import { fmt }  from '../../utils/currency.js';
+import { useFmt } from '../../utils/currency.js';
 
 export default function RoomCard({ room, showBookBtn = false, onBook }) {
+  const fmt = useFmt();
   const baseRate = room.rate_plans?.[0]?.rate || room.base_rate;
   const roomId   = room.room_type_id || room.type_id || room.id;
 

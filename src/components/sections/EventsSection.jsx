@@ -35,7 +35,9 @@ export default function EventsSection() {
   const sectionId = 'events';
   const isActive  = edit?.isEditMode && edit?.activeSection === sectionId;
   const saved     = hotelConfig.content?.[sectionId] || {};
-  const c         = edit?.isEditMode ? { ...saved, ...edit.content?.[sectionId] } : saved;
+  // In edit mode, getContent() merges saved API content with live edits —
+  // this keeps edits visible even after clicking Done (not just while isActive).
+  const c         = edit?.getContent ? edit.getContent(sectionId, saved) : saved;
 
   const eyebrow     = c.eyebrow     || 'Events & Venues';
   const headline    = c.headline    || 'Host your next';

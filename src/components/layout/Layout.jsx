@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGuestAuth }   from '../../hooks/useGuestAuth.jsx';
 import { useHotelConfig } from '../../hooks/useHotelConfig.jsx';
+import { useFmt }         from '../../utils/currency.js';
 import { DEFAULT_LAYOUT } from '../../config/theme.js';
 import { roomsApi }       from '../../services/api.js';
 import { Instagram, Facebook, Twitter, MessageCircle, User, MapPin, Phone } from 'lucide-react';
@@ -10,6 +11,7 @@ import NotificationBell from './NotificationBell.jsx';
 
 // ── Rooms dropdown ────────────────────────────────────────────────────────────
 function RoomsDropdown({ textColor, isTransparent }) {
+  const fmt         = useFmt();
   const [open,      setOpen]      = useState(false);
   const [types,     setTypes]     = useState([]);
   const [loading,   setLoading]   = useState(false);
@@ -151,11 +153,7 @@ function RoomsDropdown({ textColor, isTransparent }) {
                         fontSize: 11, color: 'var(--accent)',
                         fontFamily: 'var(--font-body)', margin: '2px 0 0',
                       }}>
-                        From {new Intl.NumberFormat('en', {
-                          style: 'currency',
-                          currency: 'NGN',
-                          minimumFractionDigits: 0,
-                        }).format((type.base_rate || 0) / 100)} / night
+                        From {fmt(type.base_rate)} / night
                       </p>
                     )}
                   </div>

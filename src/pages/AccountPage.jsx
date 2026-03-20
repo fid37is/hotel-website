@@ -4,7 +4,7 @@ import { Link, useNavigate }   from 'react-router-dom';
 import { useGuestAuth }        from '../hooks/useGuestAuth.jsx';
 import { useHotelConfig }      from '../hooks/useHotelConfig.jsx';
 import { guestAuthApi } from '../services/api.js';
-import { fmt }                 from '../utils/currency.js';
+import { useFmt }              from '../utils/currency.js';
 
 const STATUS = {
   confirmed:   { label: 'Confirmed',   cls: 'bg-green-100 text-green-700' },
@@ -53,6 +53,7 @@ export default function AccountPage() {
   const hotelConfig = useHotelConfig();
   const { guest, token, isLoggedIn, loading: authLoading, logout, updateProfile } = useGuestAuth();
   const navigate = useNavigate();
+  const fmt         = useFmt();
 
   const [reservations, setReservations] = useState([]);
   const [resLoading,   setResLoading]   = useState(false);

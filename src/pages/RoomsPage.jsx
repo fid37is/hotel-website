@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useBooking }     from '../hooks/useBooking.jsx';
 import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
 import { roomsApi }       from '../services/api.js';
-import { fmt }            from '../utils/currency.js';
+import { useFmt }          from '../utils/currency.js';
 import AvailabilitySearch from '../components/booking/AvailabilitySearch.jsx';
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80&auto=format&fit=crop';
@@ -39,6 +39,7 @@ function useRotatingImage(images, index) {
 }
 
 export default function RoomsPage() {
+  const fmt = useFmt();
   const hotelConfig           = useHotelConfig();
   const { state, dispatch }   = useBooking();
   const navigate              = useNavigate();

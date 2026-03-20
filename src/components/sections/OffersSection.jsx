@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useHotelConfig }    from '../../hooks/useHotelConfig.jsx';
 import { useEditMode }       from '../../hooks/useEditMode.jsx';
 import EditBar               from './EditBar.jsx';
+import { useFmt }              from '../../utils/currency.js';
 
 export default function OffersSection() {
   const hotelConfig = useHotelConfig();
@@ -12,10 +13,11 @@ export default function OffersSection() {
   const sectionId = 'offers';
   const isActive  = edit?.isEditMode && edit?.activeSection === sectionId;
   const saved     = hotelConfig.content?.[sectionId] || {};
-  const c         = edit?.isEditMode ? { ...saved, ...edit.content?.[sectionId] } : saved;
+  // In edit mode, getContent() merges saved API content with live edits —
+  // this keeps edits visible even after clicking Done (not just while isActive).
+  const c         = edit?.getContent ? edit.getContent(sectionId, saved) : saved;
 
-  const currency  = hotelConfig.payment?.currency || 'NGN';
-  const fmt       = n => new Intl.NumberFormat('en', { style: 'currency', currency, minimumFractionDigits: 0 }).format((n || 0) / 100);
+  const fmt       = useFmt();
 
   const eyebrow   = c.eyebrow   || 'Special Offers';
   const headline  = c.headline  || 'Packages & Rates';
