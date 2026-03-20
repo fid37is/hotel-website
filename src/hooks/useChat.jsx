@@ -9,7 +9,10 @@ import { chatApi } from '../services/api.js';
 
 const ChatContext = createContext(null);
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1/public', '') || 'http://localhost:5000';
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_BASE_URL?.replace('/api/v1/public', '') ||
+  'http://localhost:5000';
 
 export function ChatProvider({ children, guestToken }) {
   const [socket,        setSocket]        = useState(null);
@@ -19,14 +22,15 @@ export function ChatProvider({ children, guestToken }) {
   const [messages,      setMessages]      = useState({});   // { [convId]: Message[] }
   const [typingConvs,   setTypingConvs]   = useState({});   // { [convId]: boolean }
   const typingTimerRef = useRef({});
+  const socketRef      = useRef(null);  // stable ref so callbacks always see latest socket
 
   // ── Connect socket ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!guestToken) return;
 
     const s = io(SOCKET_URL, {
-      auth:            { token: guestToken },
-      transports:      ['websocket'],
+      auth:              { token: guestToken },
+      transports:        ['websocket'],
       reconnectionDelay: 1000,
     });
 
@@ -64,8 +68,9 @@ export function ChatProvider({ children, guestToken }) {
       ));
     });
 
+    socketRef.current = s;
     setSocket(s);
-    return () => s.disconnect();
+    return () => { s.disconnect(); socketRef.current = null; };
   }, [guestToken]);
 
   // ── Load conversations for a stay ───────────────────────────────────────
@@ -86,19 +91,25 @@ export function ChatProvider({ children, guestToken }) {
       return exists ? prev : [convo, ...prev];
     });
 
-    // Join the socket room
-    if (socket) socket.emit('join_conversation', { conversationId: convo.id });
+    // Join the socket room so we receive real-time messages
+    socketRef.current?.emit('join_conversation', { conversationId: convo.id });
 
     // Load messages for the new conversation
     await loadMessages(convo.id);
     setActiveConvId(convo.id);
 
     return convo;
-  }, [socket, guestToken]);
+  }, [guestToken]);
 
   // ── Load message thread ─────────────────────────────────────────────────
+  // Always emit join_conversation when loading a thread so the guest
+  // is in the socket room and receives real-time messages — this covers
+  // both new conversations and existing ones selected after page load/reload.
   const loadMessages = useCallback(async (conversationId) => {
     try {
+      // Join the room before fetching so no messages are missed
+      socketRef.current?.emit('join_conversation', { conversationId });
+
       const res = await chatApi.getMessages(conversationId, guestToken);
       setMessages(prev => ({ ...prev, [conversationId]: res.data || [] }));
     } catch {}
@@ -118,8 +129,8 @@ export function ChatProvider({ children, guestToken }) {
   }, [guestToken]);
 
   // ── Typing indicators ───────────────────────────────────────────────────
-  const emitTyping     = (conversationId) => socket?.emit('typing',      { conversationId });
-  const emitStopTyping = (conversationId) => socket?.emit('stop_typing', { conversationId });
+  const emitTyping     = (conversationId) => socketRef.current?.emit('typing',      { conversationId });
+  const emitStopTyping = (conversationId) => socketRef.current?.emit('stop_typing', { conversationId });
 
   return (
     <ChatContext.Provider value={{

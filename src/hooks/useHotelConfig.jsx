@@ -32,7 +32,8 @@ function mergeConfig(prev, d) {
       primary:   d.primary_color                     || prev.brand.primary,
       secondary: d.accent_color || d.secondary_color || prev.brand.secondary,
     },
-    layout: parseLayout(d.layout ?? {}),  // always use API layout, never stale
+
+    layout: parseLayout(d.layout ?? {}),
 
     contact: {
       address:       fullAddress                  || prev.contact.address,
@@ -55,14 +56,14 @@ function mergeConfig(prev, d) {
 
     payment: {
       ...prev.payment,
-      currency:          d.currency            || prev.payment.currency,
-      currencySymbol:    d.currency_symbol     || prev.payment.currencySymbol,
-      payOnArrival:      d.pay_on_arrival       ?? prev.payment.payOnArrival      ?? true,
-      bankTransfer:      d.bank_transfer        ?? prev.payment.bankTransfer       ?? false,
-      paystackEnabled:   d.paystack_enabled     ?? prev.payment.paystackEnabled    ?? false,
-      bankName:          d.bank_name            || prev.payment.bankName           || '',
-      bankAccountNumber: d.bank_account_number  || prev.payment.bankAccountNumber  || '',
-      bankAccountName:   d.bank_account_name    || prev.payment.bankAccountName    || '',
+      currency:          d.currency             || prev.payment.currency,
+      currencySymbol:    d.currency_symbol      || prev.payment.currencySymbol,
+      payOnArrival:      d.pay_on_arrival        ?? prev.payment.payOnArrival      ?? true,
+      bankTransfer:      d.bank_transfer         ?? prev.payment.bankTransfer       ?? false,
+      paystackEnabled:   d.paystack_enabled      ?? prev.payment.paystackEnabled    ?? false,
+      bankName:          d.bank_name             || prev.payment.bankName           || '',
+      bankAccountNumber: d.bank_account_number   || prev.payment.bankAccountNumber  || '',
+      bankAccountName:   d.bank_account_name     || prev.payment.bankAccountName    || '',
       paystackPublicKey: d.paystack_public_key   || prev.payment.paystackPublicKey  || '',
     },
 
@@ -89,23 +90,22 @@ function mergeConfig(prev, d) {
       titleTemplate: `%s | ${d.hotel_name || prev.name}`,
       defaultTitle:  `${d.hotel_name || prev.name}${d.city ? ` — ${d.city}` : ''} Luxury Hotel`.trim(),
     },
+
+    // Section copy — admins edit via HMS CustomizePage, saved in config.content JSON column
+    content: d.content ?? prev.content ?? {},
   };
 }
 
 // ─── Cache key ────────────────────────────────────────────────────────────────
-const CACHE_KEY = 'hms_config_v1';
+const CACHE_KEY = 'hms_config_v2'; // bumped — v1 had intro in section_order
 
-const readCache = () => {
-  try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch { return null; }
-};
-const writeCache = (d) => {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch {}
-};
+const readCache  = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch { return null; } };
+const writeCache = (d) => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch {} };
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function HotelConfigProvider({ children }) {
   const [config, setConfig] = useState(() => {
-    // 1. Write default tokens immediately
+    // 1. Write default tokens immediately so nothing flashes unstyled
     applyTokens(defaultTokens);
 
     // 2. Apply cached API data if available — zero flash on refresh
@@ -117,7 +117,7 @@ export function HotelConfigProvider({ children }) {
       return mergeConfig(staticConfig, cached);
     }
 
-    // 3. Fall back to static config colors if no cache yet
+    // 3. Fall back to static config colors until the API responds
     applyBrandColors({
       primary_color: staticConfig.brand?.primary,
       accent_color:  staticConfig.brand?.secondary,
@@ -126,6 +126,7 @@ export function HotelConfigProvider({ children }) {
     return staticConfig;
   });
 
+  // ── Fetch live config from HMS API on mount ───────────────────────────────
   useEffect(() => {
     const base   = staticConfig.api.baseUrl;
     const apiKey = import.meta.env.VITE_HMS_API_KEY || '';
@@ -136,37 +137,56 @@ export function HotelConfigProvider({ children }) {
         const d = res?.data;
         if (!d) return;
 
-        // ── DEV: log the full config response so we can verify field names ──
         if (import.meta.env.DEV) {
           console.log('[HMS config] raw API response:', JSON.stringify(d, null, 2));
         }
 
-        // Always write fresh API data to cache — overwrites any stale cache
         writeCache(d);
-
         if (d.hotel_name) document.title = d.hotel_name;
         applyBrandColors(d);
         const layout = parseLayout(d.layout);
         applyFontPair(layout.font_pair);
-        // Apply layout to config — always use live API data, never stale cache
         setConfig(prev => mergeConfig(prev, d));
       })
       .catch(() => {});
   }, []);
 
-  // ── Live preview: HMS admin posts layout/color changes into this iframe ──
+  // ── Live preview: HMS CustomizePage posts changes into this iframe ────────
   useEffect(() => {
     const handler = (e) => {
-      if (e.data?.type !== 'HMS_PREVIEW') return;
-      if (e.data.colors) applyBrandColors(e.data.colors);
-      if (e.data.layout) {
-        const layout = parseLayout(e.data.layout);
-        applyFontPair(layout.font_pair);
-        setConfig(prev => ({ ...prev, layout }));
+      // Live preview: colors / layout / content changes
+      if (e.data?.type === 'HMS_PREVIEW') {
+        if (e.data.colors) applyBrandColors(e.data.colors);
+        if (e.data.layout) {
+          const layout = parseLayout(e.data.layout);
+          applyFontPair(layout.font_pair);
+          setConfig(prev => ({ ...prev, layout }));
+        }
+        if (e.data.content) {
+          setConfig(prev => ({ ...prev, content: { ...(prev.content || {}), ...e.data.content } }));
+        }
+      }
+      // Scroll handled by InlineEditor via HMS_SECTION_FOCUS}
+    };
+
+    window.addEventListener('message', handler);
+
+    // Fallback: listen for the custom event dispatched by useEditMode
+    // when MessageEvent construction fails in certain environments.
+    const customHandler = (e) => {
+      if (e.detail) {
+        setConfig(prev => ({
+          ...prev,
+          content: { ...(prev.content || {}), ...e.detail },
+        }));
       }
     };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    window.addEventListener('hms_content_update', customHandler);
+
+    return () => {
+      window.removeEventListener('message', handler);
+      window.removeEventListener('hms_content_update', customHandler);
+    };
   }, []);
 
   return (
@@ -177,4 +197,3 @@ export function HotelConfigProvider({ children }) {
 }
 
 export const useHotelConfig = () => useContext(HotelConfigContext);
-export default useHotelConfig;

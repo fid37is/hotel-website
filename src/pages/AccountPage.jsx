@@ -4,7 +4,7 @@ import { Link, useNavigate }   from 'react-router-dom';
 import { useGuestAuth }        from '../hooks/useGuestAuth.jsx';
 import { useHotelConfig }      from '../hooks/useHotelConfig.jsx';
 import { guestAuthApi } from '../services/api.js';
-import { fmt }                 from '../utils/currency.js';
+import { useFmt }              from '../utils/currency.js';
 
 const STATUS = {
   confirmed:   { label: 'Confirmed',   cls: 'bg-green-100 text-green-700' },
@@ -23,6 +23,20 @@ const ID_LABELS = {
 
 const nights = (ci, co) => Math.max(0, Math.round((new Date(co) - new Date(ci)) / 86400000));
 
+// Safely convert preferences (may be object, string, or null) to a display string
+const prefsToString = (prefs) => {
+  if (!prefs) return '';
+  if (typeof prefs === 'string') return prefs;
+  if (typeof prefs === 'object') {
+    // If it's an object with a notes/text field, use that; otherwise JSON stringify
+    if (prefs.notes) return prefs.notes;
+    if (prefs.text)  return prefs.text;
+    const str = JSON.stringify(prefs);
+    return str === '{}' ? '' : str;
+  }
+  return String(prefs);
+};
+
 function Field({ label, value, editing, name, onChange, type = 'text', children }) {
   return (
     <div>
@@ -39,6 +53,7 @@ export default function AccountPage() {
   const hotelConfig = useHotelConfig();
   const { guest, token, isLoggedIn, loading: authLoading, logout, updateProfile } = useGuestAuth();
   const navigate = useNavigate();
+  const fmt         = useFmt();
 
   const [reservations, setReservations] = useState([]);
   const [resLoading,   setResLoading]   = useState(false);
@@ -64,10 +79,14 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (guest) setForm({
-      full_name: guest.full_name || '', phone: guest.phone || '',
-      address: guest.address || '', nationality: guest.nationality || '',
-      id_type: guest.id_type || '', id_number: guest.id_number || '',
-      date_of_birth: guest.date_of_birth || '', preferences: guest.preferences || '',
+      full_name:   guest.full_name   || '',
+      phone:       guest.phone       || '',
+      address:     guest.address     || '',
+      nationality: guest.nationality || '',
+      id_type:     guest.id_type     || '',
+      id_number:   guest.id_number   || '',
+      // preferences is jsonb — convert to string for the textarea
+      preferences: prefsToString(guest.preferences),
     });
   }, [guest]);
 
@@ -97,10 +116,10 @@ export default function AccountPage() {
       await guestAuthApi.cancelReservation(id, cancelReason, token);
       setCancellingId(null); setCancelReason('');
       await loadReservations();
-      setActiveTab('cancelled'); // show the user their cancelled reservation
+      setActiveTab('cancelled');
     } catch (err) {
       setCancelError(err.message || 'Failed. Please call us.');
-      await loadReservations(); // also reload on error to restore any stale state
+      await loadReservations();
     }
     finally { setCancelling(false); }
   };
@@ -122,6 +141,7 @@ export default function AccountPage() {
   return (
     <div className="bg-bg min-h-screen pb-12" style={{ paddingTop: "calc(var(--nav-h, 72px) + 38px + 2rem)" }}>
       <div className="container">
+
         <div className="grid lg:grid-cols-5 gap-6 items-start">
 
           {/* ═══════════════════════════════════════════════
@@ -148,7 +168,7 @@ export default function AccountPage() {
                 </button>
               </div>
 
-              {/* Chat banner — right here under the name, above actions */}
+              {/* Chat banner */}
               {checkedInRes && (
                 <Link to="/chat"
                   className="flex items-center gap-3 bg-primary text-white rounded-lg px-4 py-3 mb-4 hover:opacity-90 transition-opacity">
@@ -156,7 +176,7 @@ export default function AccountPage() {
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                   </svg>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold">You're checked in · Room {checkedInRes.rooms?.room_number || '—'}</p>
+                    <p className="text-xs font-semibold">You're checked in · Room {checkedInRes.rooms?.number || checkedInRes.room_number || checkedInRes.room_no || '—'}</p>
                     <p className="text-xs text-white/70">Tap to message our team</p>
                   </div>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12" className="shrink-0 text-white/50">
@@ -181,7 +201,7 @@ export default function AccountPage() {
                             : <a key={label} href={href} className={cls}>{inner}</a>;
                 })}
               </div>
-            </div>{/* ← FIX: closes Avatar card (was missing) */}
+            </div>
 
             {/* Profile details card */}
             <div className="bg-surface border border-border rounded-xl p-5">
@@ -213,10 +233,8 @@ export default function AccountPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Phone" name="phone" value={form.phone} type="tel" editing={editing} onChange={onChange} />
-                  <Field label="Date of Birth" name="date_of_birth" value={form.date_of_birth} type="date" editing={editing} onChange={onChange} />
+                  <Field label="Nationality" name="nationality" value={form.nationality} editing={editing} onChange={onChange} />
                 </div>
-
-                <Field label="Nationality" name="nationality" value={form.nationality} editing={editing} onChange={onChange} />
 
                 <Field label="Address" name="address" value={form.address} editing={editing} onChange={onChange}>
                   {editing && <textarea name="address" className="input text-sm w-full" rows={2} value={form.address || ''} onChange={onChange} />}
@@ -249,7 +267,7 @@ export default function AccountPage() {
           <div className="lg:col-span-3">
             <div className="bg-surface border border-border rounded-xl overflow-hidden">
 
-              {/* Tabs — top of the right column, not below everything */}
+              {/* Tabs */}
               <div className="flex border-b border-border">
                 {[
                   { key: 'upcoming',  label: 'Upcoming',  count: upcoming.length  },
@@ -308,9 +326,19 @@ export default function AccountPage() {
                                 </Link>
                               )}
                             </div>
-                            <p className="text-xs text-muted font-mono">{res.reservation_no}</p>
+                            <p className="text-xs text-muted font-mono mt-0.5">{res.reservation_no}</p>
                           </div>
-                          <p className="text-base font-semibold text-primary shrink-0">{fmt(res.total_amount)}</p>
+                          <div className="text-right shrink-0">
+                            <p className="text-base font-semibold text-primary">{fmt(res.total_amount)}</p>
+                            {res.status === 'checked_in' && (res.rooms?.number || res.room_number || res.room_no) && (
+                              <p className="text-xs font-semibold text-blue-700 mt-1">
+                                Room {res.rooms?.number || res.room_number || res.room_no}
+                              </p>
+                            )}
+                            {res.status === 'checked_in' && !(res.rooms?.number || res.room_number || res.room_no) && (
+                              <p className="text-xs text-muted mt-1">Room TBA</p>
+                            )}
+                          </div>
                         </div>
 
                         {/* Dates */}

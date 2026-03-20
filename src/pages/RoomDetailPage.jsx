@@ -4,7 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { roomsApi }      from '../services/api.js';
 import { useBooking }    from '../hooks/useBooking.jsx';
 import { useHotelConfig } from '../hooks/useHotelConfig.jsx';
-import { fmt }           from '../utils/currency.js';
+import { useFmt }          from '../utils/currency.js';
 import RoomGallery       from '../components/ui/RoomGallery.jsx';
 
 // Type-level marketing images — from type.photos (set by admin in HMS Room Types)
@@ -27,6 +27,7 @@ const getRoomVideo = (room) => {
 };
 
 export default function RoomDetailPage() {
+  const fmt = useFmt();
   const { id }        = useParams();
   const navigate      = useNavigate();
   const { dispatch }  = useBooking();
