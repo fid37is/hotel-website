@@ -14,24 +14,25 @@ export default function HeroSection({ checkin, setCheckin, checkout, setCheckout
   const sectionId  = 'hero';
   const isActive   = edit?.isEditMode && edit?.activeSection === sectionId;
   const saved      = hotelConfig.content?.[sectionId] || {};
-  // In edit mode use live-edited values, otherwise use saved config
-  const c          = (edit?.isEditMode ? { ...saved, ...edit.content?.[sectionId] } : saved);
+  const c          = edit?.getContent ? edit.getContent(sectionId, saved) : saved;
 
-  const name     = hotelConfig?.name         || 'The Grand Hotel';
-  const heroImg  = hotelConfig?.heroImageUrl || FALLBACK_IMG;
-  const logoUrl  = hotelConfig?.logoUrl;
-  const eyebrow  = c.eyebrow  || ('Welcome to ' + name);
-  const tagline  = c.headline || hotelConfig?.tagline || 'Where Luxury Meets Legacy';
+  const name    = hotelConfig?.name         || 'The Grand Hotel';
+  const heroImg = hotelConfig?.heroImageUrl || FALLBACK_IMG;
+  const logoUrl = hotelConfig?.logoUrl;
+  const eyebrow = c.eyebrow  || ('Welcome to ' + name);
+  const tagline = c.headline || hotelConfig?.tagline || 'Where Luxury Meets Legacy';
 
   const HEADER_H = 'calc(var(--nav-h, 72px) + 38px)';
 
   return (
+    // No overflow:hidden on the outer section — same pattern as StorySection.
+    // The image stays contained via position:absolute inset:0 without needing clipping.
+    // This lets the EditBar (position:absolute, zIndex:950) render visibly.
     <section id="hero" data-section="hero" style={{
       position: 'relative',
       marginTop: `calc(${HEADER_H} * -1)`,
       height: `calc(100vh + ${HEADER_H})`,
       minHeight: 560,
-      overflow: 'hidden',
     }}>
       <img src={heroImg} alt={name} onLoad={() => setLoaded(true)} style={{
         position: 'absolute', inset: 0, width: '100%', height: '100%',
@@ -120,11 +121,49 @@ export default function HeroSection({ checkin, setCheckin, checkout, setCheckout
         </p>
       </div>
 
-      {edit?.isEditMode && (
-        <EditBar sectionId={sectionId} label="Hero Banner"
-          isActive={isActive}
-          onEdit={() => edit.activateSection(sectionId)}
-          onDone={() => edit.deactivateSection()} />
+      {/* EditBar — positioned at top-right of the VISIBLE hero area.
+          The section has a negative marginTop so we offset by HEADER_H to stay visible. */}
+      {edit?.isEditMode && !isActive && (
+        <button type="button" onClick={() => edit.activateSection(sectionId)} style={{
+          position: 'absolute',
+          top: `calc(var(--nav-h, 72px) + 54px)`,
+          right: 16,
+          zIndex: 950,
+          display: 'flex', alignItems: 'center', gap: 6,
+          fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 600,
+          letterSpacing: '0.06em', textTransform: 'uppercase', color: '#fff',
+          background: 'rgba(17,17,17,0.8)', border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: 6, padding: '7px 14px', cursor: 'pointer',
+          backdropFilter: 'blur(8px)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+        }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          Edit
+        </button>
+      )}
+      {edit?.isEditMode && isActive && (
+        <div style={{
+          position: 'absolute',
+          top: `calc(var(--nav-h, 72px) + 38px)`,
+          left: 0, right: 0,
+          zIndex: 950,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 16px',
+          background: 'rgba(99,102,241,0.95)',
+          backdropFilter: 'blur(8px)',
+        }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#fff' }}>
+            ✎ Editing: Hero Banner
+          </span>
+          <button type="button" onClick={() => edit.deactivateSection()} style={{
+            fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 600,
+            color: '#fff', cursor: 'pointer',
+            background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)',
+            borderRadius: 5, padding: '5px 14px',
+          }}>✓ Done</button>
+        </div>
       )}
     </section>
   );
@@ -132,9 +171,9 @@ export default function HeroSection({ checkin, setCheckin, checkout, setCheckout
 
 const INPUT_STYLE = {
   width: '100%', boxSizing: 'border-box',
-  background: 'rgba(255,255,255,0.12)',
-  border: '1.5px dashed rgba(99,102,241,0.8)',
+  background: 'rgba(0,0,0,0.35)',
+  border: '1.5px dashed rgba(99,102,241,0.9)',
   borderRadius: 4, padding: '4px 10px',
   fontFamily: 'inherit', outline: 'none',
-  color: 'inherit', cursor: 'text',
+  color: '#fff', cursor: 'text',
 };

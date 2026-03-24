@@ -83,7 +83,16 @@ function mergeConfig(prev, d) {
     },
 
     receiptFooter: d.receipt_footer || '',
+    org_id:        d.org_id         || null,
     features:      prev.features,
+
+    // SEO fields from DB
+    seo_title:       d.seo_title       || null,
+    seo_description: d.seo_description || null,
+    seo_keywords:    d.seo_keywords    || null,
+    og_image:        d.og_image        || null,
+    canonical_url:   d.canonical_url   || null,
+    robots:          d.robots          || 'index,follow',
 
     seo: {
       ...prev.seo,
@@ -112,7 +121,7 @@ export function HotelConfigProvider({ children }) {
     const cached = readCache();
     if (cached) {
       applyBrandColors(cached);
-      const layout = parseLayout(cached.layout);
+      const layout = parseLayout(cached.layout ?? {});
       applyFontPair(layout.font_pair);
       return mergeConfig(staticConfig, cached);
     }
@@ -141,10 +150,15 @@ export function HotelConfigProvider({ children }) {
           console.log('[HMS config] raw API response:', JSON.stringify(d, null, 2));
         }
 
+        // Clear stale cache if org changed
+        const existing = readCache();
+        if (existing?.org_id && existing.org_id !== d.org_id) {
+          try { localStorage.removeItem(CACHE_KEY); } catch {}
+        }
         writeCache(d);
         if (d.hotel_name) document.title = d.hotel_name;
         applyBrandColors(d);
-        const layout = parseLayout(d.layout);
+        const layout = parseLayout(d.layout ?? {});
         applyFontPair(layout.font_pair);
         setConfig(prev => mergeConfig(prev, d));
       })
@@ -158,7 +172,7 @@ export function HotelConfigProvider({ children }) {
       if (e.data?.type === 'HMS_PREVIEW') {
         if (e.data.colors) applyBrandColors(e.data.colors);
         if (e.data.layout) {
-          const layout = parseLayout(e.data.layout);
+          const layout = parseLayout(e.data.layout ?? {});
           applyFontPair(layout.font_pair);
           setConfig(prev => ({ ...prev, layout }));
         }
@@ -170,23 +184,7 @@ export function HotelConfigProvider({ children }) {
     };
 
     window.addEventListener('message', handler);
-
-    // Fallback: listen for the custom event dispatched by useEditMode
-    // when MessageEvent construction fails in certain environments.
-    const customHandler = (e) => {
-      if (e.detail) {
-        setConfig(prev => ({
-          ...prev,
-          content: { ...(prev.content || {}), ...e.detail },
-        }));
-      }
-    };
-    window.addEventListener('hms_content_update', customHandler);
-
-    return () => {
-      window.removeEventListener('message', handler);
-      window.removeEventListener('hms_content_update', customHandler);
-    };
+    return () => window.removeEventListener('message', handler);
   }, []);
 
   return (

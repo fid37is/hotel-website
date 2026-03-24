@@ -23,7 +23,7 @@ export default function OffersSection() {
   const headline  = c.headline  || 'Packages & Rates';
   const ctaLabel  = c.ctaLabel  || 'All Offers';
   const bookLabel = c.bookLabel || 'Book This Offer';
-  const offers    = hotelConfig.offers || c.items || [
+  const offers    = c.items || hotelConfig.offers || [
     { id: 1, tag: 'Leisure',   name: 'Weekend Escape',   desc: 'Arrive Friday, depart Monday — late checkout and breakfast included.',  rate: 8500000  },
     { id: 2, tag: 'Corporate', name: 'Business Stay',    desc: 'Flexible check-in, high-speed Wi-Fi, and daily laundry included.',      rate: 9000000  },
     { id: 3, tag: 'Couples',   name: 'Romantic Getaway', desc: 'Champagne on arrival, couples spa treatment, and dinner for two.',      rate: 12000000 },
