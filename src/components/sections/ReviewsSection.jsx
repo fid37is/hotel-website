@@ -18,7 +18,7 @@ export default function ReviewsSection() {
   const headline     = c.headline || 'What Our Guests Say';
   const guestRating  = hotelConfig.reviews?.average || 4.8;
   const guestCount   = hotelConfig.reviews?.count   || 1200;
-  const testimonials = hotelConfig.reviews?.testimonials || c.testimonials || [
+  const testimonials = c.testimonials || hotelConfig.reviews?.testimonials || [
     { name: 'Chinedu A.',   role: 'Business Traveller', quote: 'Best decision for my trip — quiet rooms, flawless Wi-Fi, and a team that remembered my name.' },
     { name: 'Amara & Dele', role: 'Couple',             quote: 'Felt like a private resort in the middle of the city. We barely wanted to leave.' },
   ];

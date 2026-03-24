@@ -45,8 +45,8 @@ function GuestAuthNotificationsWrapper({ children }) {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <BrowserRouter>
+    <BrowserRouter>
+      <ErrorBoundary>
         <HotelConfigProvider>
           <EditModeProvider>
             <GuestAuthProvider>
@@ -97,7 +97,7 @@ export default function App() {
           </GuestAuthProvider>
           </EditModeProvider>
         </HotelConfigProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </BrowserRouter>
   );
 }

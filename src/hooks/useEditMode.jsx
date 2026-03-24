@@ -82,6 +82,33 @@ export function EditModeProvider({ children }) {
           return next;
         });
       }
+
+      // HMS parent signals a successful save — clear the config cache so
+      // the next page load fetches fresh data from the API
+      if (e.data?.type === 'HMS_CACHE_BUST') {
+        try { localStorage.removeItem('hms_config_v2'); } catch {}
+        // Force a full config refetch by reloading the iframe
+        if (e.data.reload) window.location.reload();
+      }
+
+      // HMS parent requests scroll to a section
+      if (e.data?.type === 'HMS_SCROLL_TO' && e.data.sectionId) {
+        const el = document.querySelector(`[data-section="${e.data.sectionId}"], #${e.data.sectionId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // HMS_PREVIEW can also carry content (sent by CustomizePage when sidebar
+      // edits happen). Merge it in so iframe reflects sidebar changes live.
+      if (e.data?.type === 'HMS_PREVIEW' && e.data.content) {
+        setContent(prev => {
+          const next = { ...prev };
+          Object.keys(e.data.content).forEach(sid => {
+            next[sid] = { ...(prev[sid] || {}), ...e.data.content[sid] };
+          });
+          contentRef.current = next;
+          return next;
+        });
+      }
     };
 
     window.addEventListener('message', handler);
