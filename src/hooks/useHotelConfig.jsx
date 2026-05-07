@@ -188,7 +188,7 @@ export function HotelConfigProvider({ children }) {
   }, []);
 
   return (
-    <HotelConfigContext.Provider value={config}>
+    <HotelConfigContext.Provider value={config}>npm run dev
       {children}
     </HotelConfigContext.Provider>
   );
