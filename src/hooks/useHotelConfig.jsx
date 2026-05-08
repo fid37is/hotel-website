@@ -140,7 +140,7 @@ export function HotelConfigProvider({ children }) {
     const base   = staticConfig.api.baseUrl;
     const apiKey = import.meta.env.VITE_HMS_API_KEY || '';
 
-    fetch(`${base}/config`, { headers: { 'X-API-Key': apiKey } })
+    fetch(`${base}/config`, { headers: { 'X-API-Key': apiKey, 'X-Forwarded-Host': window.location.hostname } })
       .then(r => r.ok ? r.json() : null)
       .then(res => {
         const d = res?.data;
@@ -188,7 +188,7 @@ export function HotelConfigProvider({ children }) {
   }, []);
 
   return (
-    <HotelConfigContext.Provider value={config}>npm run dev
+    <HotelConfigContext.Provider value={config}>
       {children}
     </HotelConfigContext.Provider>
   );
