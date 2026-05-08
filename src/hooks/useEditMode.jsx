@@ -63,7 +63,7 @@ export function EditModeProvider({ children }) {
 
   useEffect(() => {
     const token = getEditToken();
-    if (!token || !inIframe()) return;
+    if (!token) return;
 
     const handler = (e) => {
       // Parent confirms token → activate edit mode with initial content
