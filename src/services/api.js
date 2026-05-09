@@ -22,8 +22,9 @@ const request = async (method, path, { body, params, token } = {}) => {
   }
 
   const headers = {
-    'Content-Type': 'application/json',
-    'X-API-Key': import.meta.env.VITE_HMS_API_KEY || '',
+    'Content-Type':    'application/json',
+    'X-API-Key':       import.meta.env.VITE_HMS_API_KEY || '',
+    'X-Forwarded-Host': window.location.hostname,
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 

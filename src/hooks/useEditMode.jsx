@@ -112,9 +112,30 @@ export function EditModeProvider({ children }) {
     };
 
     window.addEventListener('message', handler);
-    window.parent.postMessage({ type: 'HMS_EDIT_REQUEST', token }, '*');
 
-    return () => window.removeEventListener('message', handler);
+    // Send immediately, then retry every 500ms until parent responds (HMS_EDIT_READY).
+    // This handles the race where the parent's listener isn't attached yet.
+    window.parent.postMessage({ type: 'HMS_EDIT_REQUEST', token }, '*');
+    let retryInterval = setInterval(() => {
+      window.parent.postMessage({ type: 'HMS_EDIT_REQUEST', token }, '*');
+    }, 500);
+
+    // Stop retrying once parent confirms
+    const stopRetry = () => { clearInterval(retryInterval); retryInterval = null; };
+
+    const originalHandler = handler;
+    const wrappedHandler = (e) => {
+      if (e.data?.type === 'HMS_EDIT_READY' && e.data.token === token) stopRetry();
+      originalHandler(e);
+    };
+
+    window.removeEventListener('message', handler);
+    window.addEventListener('message', wrappedHandler);
+
+    return () => {
+      window.removeEventListener('message', wrappedHandler);
+      clearInterval(retryInterval);
+    };
   }, []);
 
   const activateSection = useCallback((sectionId) => {
