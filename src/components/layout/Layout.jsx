@@ -225,7 +225,7 @@ export default function Layout() {
   const mainNavBg     = isTransparent ? 'transparent'       : 'var(--bg-surface, #fff)';
   const mainTextCol   = isTransparent ? 'rgba(255,255,255,0.9)' : 'var(--text-base)';
   const mainTextMuted = isTransparent ? 'rgba(255,255,255,0.55)' : 'var(--text-muted)';
-  const logoBrightness = isTransparent ? 'brightness(0) invert(1)' : 'none';
+  const logoBrightness = isTransparent ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 2px rgba(0,0,0,0.4))' : 'none';
 
   const NAV_LINKS = [
     ['/', 'Home'],
