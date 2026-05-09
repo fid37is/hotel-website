@@ -51,7 +51,7 @@ export default function HeroSection({ checkin, setCheckin, checkout, setCheckout
       }}>
         {logoUrl && (
           <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <img src={logoUrl} alt={name} style={{ height: 42, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+            <img src={logoUrl} alt={name} style={{ height: 42, width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 2px rgba(0,0,0,0.4))' }} />
             <span style={{ display: 'block', width: 48, height: 2, background: 'var(--accent)' }} />
           </div>
         )}
