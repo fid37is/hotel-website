@@ -10,6 +10,29 @@ import { useFmt }              from '../utils/currency.js';
 const STEPS = ['Select Room', 'Your Details', 'Review & Pay'];
 const nights = (ci, co) => (!ci || !co) ? 0 : Math.max(0, Math.round((new Date(co) - new Date(ci)) / 86400000));
 
+// ── Paystack inline charge ─────────────────────────────────────────────────
+const loadPaystackScript = () => new Promise((resolve) => {
+  if (window.PaystackPop) return resolve();
+  const script = document.createElement('script');
+  script.src = 'https://js.paystack.co/v1/inline.js';
+  script.onload = resolve;
+  document.head.appendChild(script);
+});
+
+const chargePaystack = ({ publicKey, email, amountKobo, reservationId, onSuccess, onCancel }) => {
+  const handler = window.PaystackPop.setup({
+    key:       publicKey,
+    email,
+    amount:    amountKobo, // Paystack uses kobo (smallest unit)
+    currency:  'NGN',
+    ref:       `RES-${reservationId}-${Date.now()}`,
+    metadata:  { reservation_id: reservationId },
+    callback:  (response) => onSuccess(response.reference),
+    onClose:   () => onCancel(),
+  });
+  handler.openIframe();
+};
+
 export default function BookingPage() {
   const hotelConfig = useHotelConfig();
   const fmt         = useFmt();
@@ -167,7 +190,36 @@ export default function BookingPage() {
         payment_method: paymentMethod,
       };
       const res = await reservationsApi.create(payload);
-      dispatch({ type: 'BOOKING_CONFIRMED', payload: { reservation: res.data?.reservation || res.data, guestToken: res.data?.guest_token, paymentMethod } });
+      const reservation = res.data?.reservation || res.data;
+      const guestToken  = res.data?.guest_token;
+
+      // For Paystack — charge now before confirming
+      if (paymentMethod === 'paystack') {
+        await loadPaystackScript();
+        const totalKobo = Math.round((selectedRate?.price_per_night || selectedType?.base_price || 0) * nights(checkIn, checkOut) * 100);
+        await new Promise((resolve, reject) => {
+          chargePaystack({
+            publicKey:     hotelConfig.payment?.paystackPublicKey,
+            email:         form.email,
+            amountKobo:    totalKobo,
+            reservationId: reservation?.id,
+            onSuccess: async (reference) => {
+              // Notify backend of successful payment
+              try {
+                await reservationsApi.confirmPayment?.(reservation?.id, { reference, method: 'paystack' });
+              } catch { /* non-fatal — reservation still created */ }
+              resolve(reference);
+            },
+            onCancel: () => {
+              // Cancel the reservation if guest closes Paystack without paying
+              reservationsApi.cancel?.(reservation?.id).catch(() => {});
+              reject(new Error('Payment was cancelled. Your booking has not been confirmed.'));
+            },
+          });
+        });
+      }
+
+      dispatch({ type: 'BOOKING_CONFIRMED', payload: { reservation, guestToken, paymentMethod } });
       navigate('/confirmation');
     } catch (err) {
       setSubmitError(err.message || 'Booking failed. Please try again.');
