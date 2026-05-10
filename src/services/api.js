@@ -114,6 +114,9 @@ export const reservationsApi = {
       body:  { reason },
       token,
     }),
+
+  confirmPayment: (id, payload) =>
+    request('POST', `/reservations/${id}/confirm-payment`, { body: payload }),
 };
 
 // ─── Folio & Payments ─────────────────────────────────────────────────────────
