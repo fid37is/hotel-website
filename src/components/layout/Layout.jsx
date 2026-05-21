@@ -452,10 +452,9 @@ export default function Layout() {
       </main>
 
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      {/* ── Footer ───────────────────────────────────────────────────────────── */}
       <footer style={{
-        background: '#0f1929',
-        color: 'rgba(255,255,255,0.75)',
+        background: 'var(--footer-bg)',
+        color: 'var(--footer-text)',
         fontFamily: 'var(--font-body)',
       }}>
         {/* Main footer grid */}
@@ -464,153 +463,95 @@ export default function Layout() {
           margin: '0 auto',
           padding: 'clamp(3rem,6vw,5rem) clamp(2rem,6vw,5rem) clamp(2rem,4vw,3rem)',
         }}>
-          <div className="footer-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr',
-            gap: 'clamp(2rem,4vw,4rem)',
-            alignItems: 'start',
-          }}>
+          <div className="footer-grid">
 
             {/* Col 1 — Brand */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Logo + name */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {hotelConfig.logoUrl && (
-                  <img
-                    src={hotelConfig.logoUrl}
-                    alt={hotelConfig.name}
-                    style={{ height: 44, width: 'auto', objectFit: 'contain' }}
-                  />
-                )}
-                <span style={{
-                  fontSize: 18, fontWeight: 700, color: '#fff',
-                  fontFamily: 'var(--font-body)', letterSpacing: '0.03em',
-                }}>
-                  {hotelConfig.name || 'Cierlo'}
-                </span>
+                {hotelConfig.logoUrl
+                  ? <img src={hotelConfig.logoUrl} alt={hotelConfig.name} style={{ height: 40, width: 'auto', objectFit: 'contain', opacity: 0.75 }} />
+                  : <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 300, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--footer-heading)' }}>{hotelConfig.name}</span>
+                }
               </div>
-
-              {/* Tagline / description */}
-              <p style={{
-                fontSize: 13, lineHeight: 1.7, margin: 0,
-                color: 'rgba(255,255,255,0.55)', maxWidth: 280,
-              }}>
+              <p style={{ fontSize: 12, color: 'var(--footer-text)', opacity: 0.6, margin: 0, lineHeight: 1.7, maxWidth: 280 }}>
                 {hotelConfig.description || 'A world-class hotel experience.'}
               </p>
-
-              {/* Social icons */}
               {hasSocial && (
-                <div style={{ display: 'flex', gap: 18, marginTop: 4 }}>
-                  {social.facebook && (
-                    <a href={social.facebook} target="_blank" rel="noopener noreferrer"
-                      style={socialIconStyle}
-                      onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)}
-                      onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}>
-                      <Facebook size={18} />
-                    </a>
-                  )}
-                  {social.instagram && (
-                    <a href={social.instagram} target="_blank" rel="noopener noreferrer"
-                      style={socialIconStyle}
-                      onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)}
-                      onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}>
-                      <Instagram size={18} />
-                    </a>
-                  )}
-                  {social.twitter && (
-                    <a href={social.twitter} target="_blank" rel="noopener noreferrer"
-                      style={socialIconStyle}
-                      onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)}
-                      onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}>
-                      <Twitter size={18} />
-                    </a>
-                  )}
+                <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
+                  {social.facebook && <a href={social.facebook} target="_blank" rel="noopener noreferrer" style={socialIconStyle} onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)} onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}><Facebook size={18} /></a>}
+                  {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" style={socialIconStyle} onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)} onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}><Instagram size={18} /></a>}
+                  {social.twitter && <a href={social.twitter} target="_blank" rel="noopener noreferrer" style={socialIconStyle} onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)} onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}><Twitter size={18} /></a>}
                 </div>
               )}
             </div>
 
             {/* Col 2 — Quick Links */}
             <div>
-              <h4 style={footerHeadingStyle}>Quick Links</h4>
-              <nav style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
-                  ['/', 'Home'],
-                  ['/rooms', 'Rooms & Suites'],
-                  ['/events', 'Events & Venues'],
-                  ['/offers', 'Special Offers'],
-                  [isLoggedIn ? '/account' : '/login', isLoggedIn ? 'My Account' : 'Sign In'],
-                  ['/contact', 'Contact'],
-                ].map(([to, label]) => (
-                  <Link key={to + label} to={to} style={footerLinkStyle}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.paddingLeft = '6px'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.paddingLeft = '0'; }}>
-                    {label}
-                  </Link>
-                ))}
-              </nav>
+              <FooterHeading>Quick Links</FooterHeading>
+              <FooterLinks links={[
+                ['/', 'Home'],
+                ['/rooms', 'Rooms & Suites'],
+                ['/events', 'Events & Venues'],
+                ['/offers', 'Special Offers'],
+                ['/explore', 'Explore the Hotel'],
+                ['/contact', 'Contact'],
+              ]} />
             </div>
 
-            {/* Col 3 — Room / Tour Categories */}
+            {/* Col 3 — Room Categories */}
             <div>
-              <h4 style={footerHeadingStyle}>Room Categories</h4>
-              <nav style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
-                  ['/rooms?type=standard', 'Standard Rooms'],
-                  ['/rooms?type=deluxe', 'Deluxe Rooms'],
-                  ['/rooms?type=suite', 'Suites'],
-                  ['/rooms?type=executive', 'Executive Rooms'],
-                  ['/rooms?type=villa', 'Villas'],
-                ].map(([to, label]) => (
-                  <Link key={to + label} to={to} style={footerLinkStyle}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.paddingLeft = '6px'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.paddingLeft = '0'; }}>
-                    {label}
-                  </Link>
-                ))}
-              </nav>
+              <FooterHeading>Room Categories</FooterHeading>
+              <FooterLinks links={[
+                ['/rooms?type=standard', 'Standard Rooms'],
+                ['/rooms?type=deluxe', 'Deluxe Rooms'],
+                ['/rooms?type=suite', 'Suites'],
+                ['/rooms?type=executive', 'Executive Rooms'],
+                ['/rooms?type=villa', 'Villas'],
+              ]} />
             </div>
 
             {/* Col 4 — Contact Info */}
             <div>
-              <h4 style={footerHeadingStyle}>Contact Info</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <FooterHeading>Get in Touch</FooterHeading>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {contact.phone && (
                   <a href={'tel:' + contact.phone} style={contactItemStyle}
-                    onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.65)'}>
-                    <Phone size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <span>{contact.phone}</span>
+                    onMouseEnter={e => Object.assign(e.currentTarget.style, contactItemHover)}
+                    onMouseLeave={e => Object.assign(e.currentTarget.style, contactItemStyle)}>
+                    <Phone size={13} style={{ flexShrink: 0, marginTop: 2 }} />{contact.phone}
                   </a>
                 )}
                 {contact.email && (
                   <a href={'mailto:' + contact.email} style={contactItemStyle}
-                    onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.65)'}>
-                    {/* envelope icon */}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
-                      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                    </svg>
-                    <span>{contact.email}</span>
+                    onMouseEnter={e => Object.assign(e.currentTarget.style, contactItemHover)}
+                    onMouseLeave={e => Object.assign(e.currentTarget.style, contactItemStyle)}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+                    {contact.email}
                   </a>
                 )}
                 {contact.address && (
-                  <div style={{ ...contactItemStyle, cursor: 'default' }}>
-                    <MapPin size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <p style={{ ...contactItemStyle, cursor: 'default', margin: 0 }}>
+                    <MapPin size={13} style={{ flexShrink: 0, marginTop: 2 }} />
                     <span style={{ lineHeight: 1.6 }}>{contact.address}</span>
-                  </div>
+                  </p>
                 )}
                 {(contact.checkIn || contact.checkOut) && (
-                  <div style={{ ...contactItemStyle, cursor: 'default' }}>
-                    {/* clock icon */}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
-                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                    </svg>
+                  <p style={{ ...contactItemStyle, cursor: 'default', margin: 0 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                     <span>
-                      {contact.checkIn ? `Check-in: ${contact.checkIn}` : ''}
-                      {contact.checkIn && contact.checkOut ? ' · ' : ''}
-                      {contact.checkOut ? `Check-out: ${contact.checkOut}` : ''}
+                      {contact.checkIn && `Check-in: ${contact.checkIn}`}
+                      {contact.checkIn && contact.checkOut && ' · '}
+                      {contact.checkOut && `Check-out: ${contact.checkOut}`}
                     </span>
-                  </div>
+                  </p>
+                )}
+                {contact.googleMapsUrl && (
+                  <a href={contact.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ ...contactItemStyle, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                    onMouseEnter={e => Object.assign(e.currentTarget.style, contactItemHover)}
+                    onMouseLeave={e => Object.assign(e.currentTarget.style, contactItemStyle)}>
+                    View on map ↗
+                  </a>
                 )}
               </div>
             </div>
@@ -621,26 +562,22 @@ export default function Layout() {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{
             maxWidth: 1280, margin: '0 auto',
-            padding: '1.1rem clamp(2rem,6vw,5rem)',
+            padding: '1.2rem clamp(2rem,6vw,5rem)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             flexWrap: 'wrap', gap: '0.75rem',
           }}>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0, fontFamily: 'var(--font-body)' }}>
+            <p style={{ fontSize: 11, color: 'var(--footer-text)', opacity: 0.35, margin: 0 }}>
               © {new Date().getFullYear()} {hotelConfig.name}. All rights reserved.
             </p>
-            <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
               {[
                 ['/privacy', 'Privacy Policy'],
                 ['/terms', 'Terms & Conditions'],
                 ['/cancellation', 'Cancellation Policy'],
               ].map(([to, label]) => (
-                <Link key={to} to={to} style={{
-                  fontSize: 12, color: 'rgba(255,255,255,0.45)',
-                  textDecoration: 'none', fontFamily: 'var(--font-body)',
-                  transition: 'color 0.2s',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}>
+                <Link key={to} to={to} style={{ ...FLS, fontSize: 11 }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '0.55'}>
                   {label}
                 </Link>
               ))}
@@ -686,27 +623,12 @@ const footerHeadingStyle = {
   letterSpacing: '0.02em',
 };
 
-const footerLinkStyle = {
-  fontSize: 13, color: 'rgba(255,255,255,0.6)',
-  textDecoration: 'none', fontFamily: 'var(--font-body)',
-  transition: 'color 0.2s, padding-left 0.2s',
-  paddingLeft: 0,
-};
-
-const contactItemStyle = {
-  display: 'flex', alignItems: 'flex-start', gap: 10,
-  fontSize: 13, color: 'rgba(255,255,255,0.65)',
-  textDecoration: 'none', fontFamily: 'var(--font-body)',
-  transition: 'color 0.2s', lineHeight: 1.5,
-};
-
-const socialIconStyle = {
-  color: 'rgba(255,255,255,0.55)', display: 'flex',
-  transition: 'color 0.2s',
-};
-
-const socialIconHover = {
-  color: '#fff',
-};
+const contactItemStyle = { display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: 'var(--footer-link-hover)', textDecoration: 'none', opacity: 0.55, fontFamily: 'var(--font-body)', transition: 'color 0.2s, opacity 0.2s' };
+ 
+const contactItemHover = { color: 'var(--footer-heading)', opacity: '1' };
+ 
+const socialIconStyle = { color: 'var(--footer-heading)', opacity: 0.45, transition: 'opacity 0.2s', display: 'flex' };
+ 
+const socialIconHover = { color: 'var(--footer-heading)', opacity: '1' };
 
 const FLS = { fontSize: 13, color: 'var(--footer-link-hover)', textDecoration: 'none', opacity: 0.55, transition: 'opacity 0.2s', fontFamily: 'var(--font-body)' };
