@@ -1,23 +1,23 @@
 // src/components/layout/Layout.jsx
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useGuestAuth }   from '../../hooks/useGuestAuth.jsx';
+import { useGuestAuth } from '../../hooks/useGuestAuth.jsx';
 import { useHotelConfig } from '../../hooks/useHotelConfig.jsx';
-import { useFmt }         from '../../utils/currency.js';
+import { useFmt } from '../../utils/currency.js';
 import { DEFAULT_LAYOUT } from '../../config/theme.js';
-import { roomsApi }       from '../../services/api.js';
+import { roomsApi } from '../../services/api.js';
 import { Instagram, Facebook, Twitter, MessageCircle, User, MapPin, Phone } from 'lucide-react';
 import NotificationBell from './NotificationBell.jsx';
 
 // ── Rooms dropdown ────────────────────────────────────────────────────────────
 function RoomsDropdown({ textColor, isTransparent }) {
-  const fmt         = useFmt();
-  const [open,      setOpen]      = useState(false);
-  const [types,     setTypes]     = useState([]);
-  const [loading,   setLoading]   = useState(false);
-  const [fetched,   setFetched]   = useState(false);
-  const ref         = useRef(null);
-  const closeTimer  = useRef(null);
+  const fmt = useFmt();
+  const [open, setOpen] = useState(false);
+  const [types, setTypes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
+  const ref = useRef(null);
+  const closeTimer = useRef(null);
 
   // Fetch room types once on first hover
   const fetchTypes = () => {
@@ -25,7 +25,7 @@ function RoomsDropdown({ textColor, isTransparent }) {
     setLoading(true);
     roomsApi.getTypes()
       .then(res => setTypes(res.data || []))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => { setLoading(false); setFetched(true); });
   };
 
@@ -70,7 +70,7 @@ function RoomsDropdown({ textColor, isTransparent }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
           width="10" height="10"
           style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-          <polyline points="6 9 12 15 18 9"/>
+          <polyline points="6 9 12 15 18 9" />
         </svg>
       </Link>
 
@@ -118,7 +118,7 @@ function RoomsDropdown({ textColor, isTransparent }) {
               [1, 2, 3].map(i => (
                 <div key={i} style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <div style={{ height: 10, width: '60%', background: 'var(--border-base)', borderRadius: 2 }} />
-                  <div style={{ height: 8,  width: '40%', background: 'var(--border-base)', borderRadius: 2, opacity: 0.6 }} />
+                  <div style={{ height: 8, width: '40%', background: 'var(--border-base)', borderRadius: 2, opacity: 0.6 }} />
                 </div>
               ))
             ) : types.length === 0 ? (
@@ -159,7 +159,7 @@ function RoomsDropdown({ textColor, isTransparent }) {
                   </div>
                   <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"
                     width="12" height="12" style={{ flexShrink: 0, opacity: 0.5 }}>
-                    <polyline points="9 18 15 12 9 6"/>
+                    <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </Link>
               ))
@@ -183,7 +183,7 @@ function RoomsDropdown({ textColor, isTransparent }) {
               View All Rooms
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                 width="10" height="10">
-                <polyline points="9 18 15 12 9 6"/>
+                <polyline points="9 18 15 12 9 6" />
               </svg>
             </Link>
           </div>
@@ -195,12 +195,12 @@ function RoomsDropdown({ textColor, isTransparent }) {
 
 export default function Layout() {
   const hotelConfig = useHotelConfig();
-  const [scrolled,  setScrolled]  = useState(false);
-  const [menuOpen,  setMenuOpen]  = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { isLoggedIn, guest, logout } = useGuestAuth();
   const location = useLocation();
-  const navigate  = useNavigate();
-  const isHome    = location.pathname === '/';
+  const navigate = useNavigate();
+  const isHome = location.pathname === '/';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -215,15 +215,15 @@ export default function Layout() {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const navStyleKey   = hotelConfig.layout?.nav_style || DEFAULT_LAYOUT.nav_style;
+  const navStyleKey = hotelConfig.layout?.nav_style || DEFAULT_LAYOUT.nav_style;
   const isTransparent = navStyleKey === 'transparent_scroll' && isHome && !scrolled;
 
   const { contact = {}, social = {}, features = {} } = hotelConfig;
   const hasSocial = social?.instagram || social?.facebook || social?.twitter;
 
-  const topBarBg      = isTransparent ? 'rgba(0,0,0,0.45)' : 'var(--brand)';
-  const mainNavBg     = isTransparent ? 'transparent'       : 'var(--bg-surface, #fff)';
-  const mainTextCol   = isTransparent ? 'rgba(255,255,255,0.9)' : 'var(--text-base)';
+  const topBarBg = isTransparent ? 'rgba(0,0,0,0.45)' : 'var(--brand)';
+  const mainNavBg = isTransparent ? 'transparent' : 'var(--bg-surface, #fff)';
+  const mainTextCol = isTransparent ? 'rgba(255,255,255,0.9)' : 'var(--text-base)';
   const mainTextMuted = isTransparent ? 'rgba(255,255,255,0.55)' : 'var(--text-muted)';
   const logoBrightness = isTransparent ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 2px rgba(0,0,0,0.4))' : 'none';
 
@@ -290,9 +290,9 @@ export default function Layout() {
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.85)'}>About Us</Link>
           {hasSocial && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 20 }}>
-              {social.facebook  && <a href={social.facebook}  target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.7)'}><Facebook size={15} /></a>}
-              {social.twitter   && <a href={social.twitter}   target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.7)'}><Twitter size={15} /></a>}
-              {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.7)'}><Instagram size={15} /></a>}
+              {social.facebook && <a href={social.facebook} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}><Facebook size={15} /></a>}
+              {social.twitter && <a href={social.twitter} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}><Twitter size={15} /></a>}
+              {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s', display: 'flex' }} onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}><Instagram size={15} /></a>}
             </div>
           )}
         </div>
@@ -323,7 +323,7 @@ export default function Layout() {
             )}
             <div>
               <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: mainTextCol, margin: 0, lineHeight: 1.2, transition: 'color 0.4s', whiteSpace: 'nowrap' }}>
-                {hotelConfig.name || 'The Grand'}
+                {hotelConfig.name || 'Cierlo'}
               </p>
               {hotelConfig.tagline && (
                 <p style={{ fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.08em', color: mainTextMuted, margin: 0, textTransform: 'uppercase', transition: 'color 0.4s' }}>
@@ -441,7 +441,7 @@ export default function Layout() {
           )}
         </nav>
         <div style={{ padding: '16px 24px 28px', borderTop: '1px solid var(--border-soft)' }}>
-          {contact.phone && <a href={"tel:"+contact.phone} style={{ display: 'block', fontSize: 13, color: 'var(--accent)', textDecoration: 'none', marginBottom: 6, fontFamily: 'var(--font-body)' }}>{contact.phone}</a>}
+          {contact.phone && <a href={"tel:" + contact.phone} style={{ display: 'block', fontSize: 13, color: 'var(--accent)', textDecoration: 'none', marginBottom: 6, fontFamily: 'var(--font-body)' }}>{contact.phone}</a>}
           {contact.address && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>{contact.address}</p>}
         </div>
       </div>
@@ -452,58 +452,206 @@ export default function Layout() {
       </main>
 
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      <footer style={{ background: 'var(--footer-bg)', color: 'var(--footer-text)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(4rem,8vw,7rem) clamp(2rem,8vw,6rem) clamp(2.5rem,4vw,3.5rem)' }}>
-          <div className="footer-grid">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {hotelConfig.logoUrl
-                ? <img src={hotelConfig.logoUrl} alt={hotelConfig.name} style={{ height: 40, width: 'auto', objectFit: 'contain', opacity: 0.75 }} />
-                : <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 300, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--footer-heading)' }}>{hotelConfig.name}</span>
-              }
-              <p style={{ fontSize: 12, color: 'var(--footer-text)', opacity: 0.6, margin: 0, fontFamily: 'var(--font-body)', lineHeight: 1.7, maxWidth: 260 }}>
+      {/* ── Footer ───────────────────────────────────────────────────────────── */}
+      <footer style={{
+        background: '#0f1929',
+        color: 'rgba(255,255,255,0.75)',
+        fontFamily: 'var(--font-body)',
+      }}>
+        {/* Main footer grid */}
+        <div style={{
+          maxWidth: 1280,
+          margin: '0 auto',
+          padding: 'clamp(3rem,6vw,5rem) clamp(2rem,6vw,5rem) clamp(2rem,4vw,3rem)',
+        }}>
+          <div className="footer-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr',
+            gap: 'clamp(2rem,4vw,4rem)',
+            alignItems: 'start',
+          }}>
+
+            {/* Col 1 — Brand */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Logo + name */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {hotelConfig.logoUrl && (
+                  <img
+                    src={hotelConfig.logoUrl}
+                    alt={hotelConfig.name}
+                    style={{ height: 44, width: 'auto', objectFit: 'contain' }}
+                  />
+                )}
+                <span style={{
+                  fontSize: 18, fontWeight: 700, color: '#fff',
+                  fontFamily: 'var(--font-body)', letterSpacing: '0.03em',
+                }}>
+                  {hotelConfig.name || 'Cierlo'}
+                </span>
+              </div>
+
+              {/* Tagline / description */}
+              <p style={{
+                fontSize: 13, lineHeight: 1.7, margin: 0,
+                color: 'rgba(255,255,255,0.55)', maxWidth: 280,
+              }}>
                 {hotelConfig.description || 'A world-class hotel experience.'}
               </p>
+
+              {/* Social icons */}
               {hasSocial && (
-                <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
-                  {social.facebook  && <a href={social.facebook}  target="_blank" rel="noopener noreferrer" style={{ color: 'var(--footer-heading)', opacity: 0.45, transition: 'opacity 0.2s' }} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0.45}><Facebook size={18} /></a>}
-                  {social.twitter   && <a href={social.twitter}   target="_blank" rel="noopener noreferrer" style={{ color: 'var(--footer-heading)', opacity: 0.45, transition: 'opacity 0.2s' }} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0.45}><Twitter size={18} /></a>}
-                  {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--footer-heading)', opacity: 0.45, transition: 'opacity 0.2s' }} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0.45}><Instagram size={18} /></a>}
+                <div style={{ display: 'flex', gap: 18, marginTop: 4 }}>
+                  {social.facebook && (
+                    <a href={social.facebook} target="_blank" rel="noopener noreferrer"
+                      style={socialIconStyle}
+                      onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)}
+                      onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}>
+                      <Facebook size={18} />
+                    </a>
+                  )}
+                  {social.instagram && (
+                    <a href={social.instagram} target="_blank" rel="noopener noreferrer"
+                      style={socialIconStyle}
+                      onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)}
+                      onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}>
+                      <Instagram size={18} />
+                    </a>
+                  )}
+                  {social.twitter && (
+                    <a href={social.twitter} target="_blank" rel="noopener noreferrer"
+                      style={socialIconStyle}
+                      onMouseEnter={e => Object.assign(e.currentTarget.style, socialIconHover)}
+                      onMouseLeave={e => Object.assign(e.currentTarget.style, socialIconStyle)}>
+                      <Twitter size={18} />
+                    </a>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Col 2 — Quick Links */}
             <div>
-              <FooterHeading>Navigate</FooterHeading>
-              <FooterLinks links={[['/', 'Home'], ['/rooms', 'Rooms & Suites'], ['/events', 'Events & Venues'], ['/offers', 'Special Offers'], ['/explore', 'Explore the Hotel'], ['/book', 'Book a Room'], ['/manage-booking', 'Manage Booking'], [isLoggedIn ? '/account' : '/login', isLoggedIn ? 'My Account' : 'Sign In']]} />
+              <h4 style={footerHeadingStyle}>Quick Links</h4>
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  ['/', 'Home'],
+                  ['/rooms', 'Rooms & Suites'],
+                  ['/events', 'Events & Venues'],
+                  ['/offers', 'Special Offers'],
+                  [isLoggedIn ? '/account' : '/login', isLoggedIn ? 'My Account' : 'Sign In'],
+                  ['/contact', 'Contact'],
+                ].map(([to, label]) => (
+                  <Link key={to + label} to={to} style={footerLinkStyle}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.paddingLeft = '6px'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.paddingLeft = '0'; }}>
+                    {label}
+                  </Link>
+                ))}
+              </nav>
             </div>
+
+            {/* Col 3 — Room / Tour Categories */}
             <div>
-              <FooterHeading>Get in Touch</FooterHeading>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {contact.phone   && <a href={"tel:"+contact.phone}    style={FLS}>{contact.phone}</a>}
-                {contact.email   && <a href={"mailto:"+contact.email} style={FLS}>{contact.email}</a>}
-                {contact.address && <p style={{ ...FLS, lineHeight: 1.7, margin: 0 }}>{contact.address}</p>}
-                {contact.googleMapsUrl && <a href={contact.googleMapsUrl} target="_blank" rel="noopener noreferrer" style={{ ...FLS, textDecoration: 'underline', textUnderlineOffset: 3 }}>View on map ↗</a>}
-              </div>
+              <h4 style={footerHeadingStyle}>Room Categories</h4>
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  ['/rooms?type=standard', 'Standard Rooms'],
+                  ['/rooms?type=deluxe', 'Deluxe Rooms'],
+                  ['/rooms?type=suite', 'Suites'],
+                  ['/rooms?type=executive', 'Executive Rooms'],
+                  ['/rooms?type=villa', 'Villas'],
+                ].map(([to, label]) => (
+                  <Link key={to + label} to={to} style={footerLinkStyle}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.paddingLeft = '6px'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.paddingLeft = '0'; }}>
+                    {label}
+                  </Link>
+                ))}
+              </nav>
             </div>
+
+            {/* Col 4 — Contact Info */}
             <div>
-              <FooterHeading>Hours</FooterHeading>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'var(--footer-text)', fontFamily: 'var(--font-body)', opacity: 0.7 }}>
-                {contact.checkIn  && <p style={{ margin: 0 }}>Check-in: {contact.checkIn}</p>}
-                {contact.checkOut && <p style={{ margin: 0 }}>Check-out: {contact.checkOut}</p>}
-                <p style={{ margin: 0 }}>Front Desk: 24 / 7</p>
+              <h4 style={footerHeadingStyle}>Contact Info</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {contact.phone && (
+                  <a href={'tel:' + contact.phone} style={contactItemStyle}
+                    onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.65)'}>
+                    <Phone size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>{contact.phone}</span>
+                  </a>
+                )}
+                {contact.email && (
+                  <a href={'mailto:' + contact.email} style={contactItemStyle}
+                    onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.65)'}>
+                    {/* envelope icon */}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                    <span>{contact.email}</span>
+                  </a>
+                )}
+                {contact.address && (
+                  <div style={{ ...contactItemStyle, cursor: 'default' }}>
+                    <MapPin size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ lineHeight: 1.6 }}>{contact.address}</span>
+                  </div>
+                )}
+                {(contact.checkIn || contact.checkOut) && (
+                  <div style={{ ...contactItemStyle, cursor: 'default' }}>
+                    {/* clock icon */}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>
+                      {contact.checkIn ? `Check-in: ${contact.checkIn}` : ''}
+                      {contact.checkIn && contact.checkOut ? ' · ' : ''}
+                      {contact.checkOut ? `Check-out: ${contact.checkOut}` : ''}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '1.2rem clamp(2rem,8vw,6rem)' }}>
-          <p style={{ fontSize: 11, color: 'var(--footer-text)', opacity: 0.35, margin: 0, fontFamily: 'var(--font-body)' }}>
-            © {new Date().getFullYear()} {hotelConfig.name}. All rights reserved.
-          </p>
+
+        {/* Divider + bottom bar */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{
+            maxWidth: 1280, margin: '0 auto',
+            padding: '1.1rem clamp(2rem,6vw,5rem)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: '0.75rem',
+          }}>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0, fontFamily: 'var(--font-body)' }}>
+              © {new Date().getFullYear()} {hotelConfig.name}. All rights reserved.
+            </p>
+            <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
+              {[
+                ['/privacy', 'Privacy Policy'],
+                ['/terms', 'Terms & Conditions'],
+                ['/cancellation', 'Cancellation Policy'],
+              ].map(([to, label]) => (
+                <Link key={to} to={to} style={{
+                  fontSize: 12, color: 'rgba(255,255,255,0.45)',
+                  textDecoration: 'none', fontFamily: 'var(--font-body)',
+                  transition: 'color 0.2s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </footer>
 
       {/* WhatsApp FAB */}
       {features.whatsappCTA && contact.whatsapp && (
-        <a href={"https://wa.me/"+contact.whatsapp.replace(/[^0-9]/g,'')}
+        <a href={"https://wa.me/" + contact.whatsapp.replace(/[^0-9]/g, '')}
           target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"
           style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50, width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#25D366', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', transition: 'transform 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
@@ -522,7 +670,7 @@ function FooterLinks({ links }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {links.map(([to, label]) => (
-        <Link key={to+label} to={to} style={FLS}
+        <Link key={to + label} to={to} style={FLS}
           onMouseEnter={e => e.currentTarget.style.opacity = '1'}
           onMouseLeave={e => e.currentTarget.style.opacity = '0.55'}>
           {label}
@@ -531,4 +679,34 @@ function FooterLinks({ links }) {
     </div>
   );
 }
+
+const footerHeadingStyle = {
+  fontSize: 14, fontWeight: 700, color: '#fff',
+  margin: '0 0 20px', fontFamily: 'var(--font-body)',
+  letterSpacing: '0.02em',
+};
+
+const footerLinkStyle = {
+  fontSize: 13, color: 'rgba(255,255,255,0.6)',
+  textDecoration: 'none', fontFamily: 'var(--font-body)',
+  transition: 'color 0.2s, padding-left 0.2s',
+  paddingLeft: 0,
+};
+
+const contactItemStyle = {
+  display: 'flex', alignItems: 'flex-start', gap: 10,
+  fontSize: 13, color: 'rgba(255,255,255,0.65)',
+  textDecoration: 'none', fontFamily: 'var(--font-body)',
+  transition: 'color 0.2s', lineHeight: 1.5,
+};
+
+const socialIconStyle = {
+  color: 'rgba(255,255,255,0.55)', display: 'flex',
+  transition: 'color 0.2s',
+};
+
+const socialIconHover = {
+  color: '#fff',
+};
+
 const FLS = { fontSize: 13, color: 'var(--footer-link-hover)', textDecoration: 'none', opacity: 0.55, transition: 'opacity 0.2s', fontFamily: 'var(--font-body)' };

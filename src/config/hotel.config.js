@@ -7,9 +7,9 @@
 
 const hotelConfig = {
 
-  name:        'The Grand Meridian',
+  name:        'Cierlo Hotels',
   tagline:     'Where Comfort Meets Elegance',
-  shortName:   'Meridian',
+  shortName:   'Cierlo',
   description: 'A modern luxury hotel in the heart of the city, offering world-class hospitality and exceptional comfort for business and leisure travellers.',
 
   brand: {
@@ -18,10 +18,10 @@ const hotelConfig = {
   },
 
   contact: {
-    address:   '14 Marina Boulevard, Victoria Island, Lagos, Nigeria',
-    phone:     '+234 801 234 5678',
-    email:     'reservations@grandmeridian.com',
-    whatsapp:  '+2348012345678',
+    address:   '14 Marina Boulevard, Calabar Municipality, Cross River, Nigeria',
+    phone:     '+234 8085952266',
+    email:     'reservations@cierlo.app',
+    whatsapp:  '+234 8085952266',
     checkIn:   '14:00',
     checkOut:  '12:00',
   },
@@ -54,9 +54,9 @@ const hotelConfig = {
   },
 
   seo: {
-    titleTemplate: '%s | The Grand Meridian',
-    defaultTitle:  'The Grand Meridian — Lagos Luxury Hotel',
-    keywords:      'luxury hotel Lagos, Victoria Island hotel, business hotel Lagos',
+    titleTemplate: '%s | A Cierlo Hotel',
+    defaultTitle:  'Cierlo Hotels — Africa Luxury Hotel',
+    keywords:      'luxury hotel Africa',
   },
 
 };
