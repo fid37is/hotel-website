@@ -24,9 +24,9 @@ export default function AboutPage() {
   ];
 
   const team = about.team || [
-    { name: 'General Manager', role: 'Leads the property with 15 years in luxury hospitality across West Africa and Europe.', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop&face' },
-    { name: 'Head of Guest Experience', role: 'Oversees every touchpoint from arrival to departure — ensuring consistency and warmth at every step.', image: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=400&q=80&auto=format&fit=crop&face' },
-    { name: 'Executive Chef', role: 'Trained in Lagos and London, our chef brings local flavours to a contemporary kitchen.', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop&face' },
+    { name: 'Founder & CEO', role: 'Product Manager, QA Analyst and Creative Director', image: 'https://res.cloudinary.com/lordefid/image/upload/v1779368837/Fidelis_Agba_ybvted.jpg' },
+    { name: 'UI/UX Designer', role: 'Responsible for creating intuitive and visually appealing user experiences.', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop&face' },
+    { name: 'CTO', role: 'Responsible for the technical strategy and implementation of the hotel\'s digital platforms.', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop&face' },
   ];
 
   const stats = about.stats || [
